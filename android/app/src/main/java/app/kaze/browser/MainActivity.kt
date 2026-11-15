@@ -227,8 +227,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var aperturaAlAbrir = false
+
     private fun startBrowser(savedInstanceState: Bundle?) {
         if (::app.isInitialized) return
+        aperturaAlAbrir = savedInstanceState == null && intent?.action == Intent.ACTION_MAIN
         app = Kaze.get(this)
         geckoView = GeckoView(this).apply { visibility = View.INVISIBLE }
 
@@ -271,7 +274,14 @@ class MainActivity : ComponentActivity() {
                 dark, s.uiStyle, s.accent, s.glassTransparency,
                 cornerRadius = s.cornerRadius, smoothCorners = s.smoothCorners, glassOn = s.glassOn,
             ) {
-                CompositionLocalProvider(LocalApp provides app) { androidx.compose.foundation.layout.Box { Root(); FxCapasFyx(dark) } }
+                CompositionLocalProvider(LocalApp provides app) {
+                    androidx.compose.foundation.layout.Box {
+                        Root(); FxCapasFyx(dark)
+                        // Apertura de puntos: solo al abrir Fyx desde su icono (nunca al llegar con un enlace, ni al girar).
+                        var apertura by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(aperturaAlAbrir && s.animationsOn && AppMotion.durationScale.scaleFactor > 0f) }
+                        if (apertura) app.kaze.browser.ui.AperturaPuntos(app.kaze.browser.ui.PuntosIcono, "Fyx") { apertura = false }
+                    }
+                }
             }
         }
     }
