@@ -154,6 +154,8 @@ class MainActivity : ComponentActivity() {
     private var keyHandler: ((android.view.KeyEvent) -> Boolean)? = null
 
     // Antes de que la tecla llegue a la página: con el foco en la web, el motor se quedaba con Ctrl+T, Ctrl+L, etc.
+    // Activity.dispatchKeyEvent es API pública; lint lo marca solo porque androidx.core lo sobrescribe con @RestrictTo.
+    @android.annotation.SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         val shortcut = event.isCtrlPressed || event.isAltPressed ||
             event.keyCode == android.view.KeyEvent.KEYCODE_F5 || event.keyCode == android.view.KeyEvent.KEYCODE_FORWARD
