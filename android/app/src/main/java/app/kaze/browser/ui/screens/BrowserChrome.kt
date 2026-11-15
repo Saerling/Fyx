@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.screens
 
+import app.kaze.browser.fx.hazBorde
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.foundation.combinedClickable
 
@@ -333,7 +334,7 @@ private fun TabsButton(count: Int, onClick: () -> Unit, onLong: () -> Unit, size
                 .clip(RoundedCornerShape(4.dp)).background(k.glassFill()),
             contentAlignment = Alignment.Center,
         ) {
-            Text(if (count > 99) "∞" else count.toString(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = k.accent)
+            if (app.kaze.browser.fx.Fx.on("nf_tabs") && count <= 99) app.kaze.browser.fx.NumeroFlow(count, androidx.compose.ui.text.TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold), color = k.accent) else Text(if (count > 99) "∞" else count.toString(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = k.accent)
         }
     }
 }
@@ -566,7 +567,7 @@ private fun AddressPill(tab: Tab, a: ChromeActions, swipe: Boolean = true) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 when {
-                    tab.isStart || label.isBlank() -> Text("Buscar o escribir dirección", style = KazeType.body, color = k.ink55, maxLines = 1)
+                    tab.isStart || label.isBlank() -> if (app.kaze.browser.fx.Fx.on("wordrotate") || app.kaze.browser.fx.Fx.on("textloop")) app.kaze.browser.fx.TextoRotando(listOf("Buscar o escribir dirección", "Buscar noticias", "Buscar recetas", "Buscar videos", "Buscar manga"), KazeType.body, color = k.ink55, morph = app.kaze.browser.fx.Fx.on("morphingtext")) else Text("Buscar o escribir dirección", style = KazeType.body, color = k.ink55, maxLines = 1)
                     else -> {
                         if (tab.isPrivate) {
                             Text("Privada · ", style = KazeType.body.copy(fontWeight = FontWeight.Medium), color = k.ink55)
@@ -599,6 +600,7 @@ private fun AddressPill(tab: Tab, a: ChromeActions, swipe: Boolean = true) {
         }
         // Progreso de carga: línea azul dentro de la cápsula, abajo.
         val progress by animateFloatAsState(tab.progress / 100f, tween(160), label = "progress")
+        if (tab.loading && (app.kaze.browser.fx.Fx.on("borderbeam") || app.kaze.browser.fx.Fx.on("bordertrail"))) Box(Modifier.matchParentSize().hazBorde(23.dp, k.accent))
         if (tab.loading) {
             Box(
                 Modifier.align(Alignment.BottomStart).padding(horizontal = 10.dp).fillMaxWidth(progress.coerceIn(0.05f, 1f))
@@ -1215,3 +1217,4 @@ fun TabStrip(
         }
     }
 }
+

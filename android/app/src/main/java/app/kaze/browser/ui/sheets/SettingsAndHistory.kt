@@ -4,6 +4,9 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.fx.Fx
+import app.kaze.browser.fx.BibliotecaFxPantalla
+import app.kaze.browser.fx.CatalogoFyx
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.launch
 import app.kaze.browser.zsync.ZenSync
@@ -221,6 +224,12 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
     val s = app.settings
     val k = LocalKaze.current
     var needsRestart by remember { mutableStateOf(false) }
+    var fxLib by remember { mutableStateOf(false) }
+    if (fxLib) androidx.compose.ui.window.Dialog({ fxLib = false }, androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        androidx.compose.material3.MaterialTheme(colorScheme = if (k.isDark) androidx.compose.material3.darkColorScheme(primary = k.accent, background = k.paper, onBackground = k.ink) else androidx.compose.material3.lightColorScheme(primary = k.accent, background = k.paper, onBackground = k.ink)) {
+            BibliotecaFxPantalla(CatalogoFyx, { fxLib = false })
+        }
+    }
     var autoUpdates by remember { mutableStateOf(app.updater.autoCheck) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -264,6 +273,14 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
             // Personalización con las tarjetas de Mochy: color, esquinas, vidrio y movimiento.
             IosSectionHeader("Personalización")
             PersonalizationSection(s)
+            Spacer(Modifier.height(11.dp))
+            IosGroup {
+                IosRow(
+                    "Biblioteca de animaciones y funciones",
+                    subtitle = "${Fx.count(CatalogoFyx.map { it.id })} de ${CatalogoFyx.size} activas · Magic UI, Motion Primitives, NumberFlow y más",
+                    chevron = true, divider = false,
+                ) { fxLib = true }
+            }
             Note("Transparencia del vidrio: más alto deja ver más la página a través de las barras; más bajo da un vidrio más opaco y con más contraste.")
             Note("Material You usa los colores de tu fondo de pantalla (Android 12 o más nuevo) con el color en Automático.")
 

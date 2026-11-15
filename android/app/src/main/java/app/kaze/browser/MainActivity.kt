@@ -4,6 +4,7 @@
 
 package app.kaze.browser
 
+import app.kaze.browser.fx.Fx
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.SideEffect
@@ -201,6 +202,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Fx.init(this)
         enableEdgeToEdge()
         // Si se cerró por un error, mostrarlo ANTES de arrancar el motor (por si el fallo está ahí).
         val crash = if (savedInstanceState == null) CrashLog.take(this) else null
