@@ -1,13 +1,29 @@
 <p align="center">
-  <img src="branding/kaze-logo.svg" width="96" alt="Fyx">
+  <img src="docs/icono.png" width="112" alt="Fyx">
 </p>
 
 <h1 align="center">Fyx</h1>
 
 <p align="center">
-  Navegador basado en Firefox para <b>Windows</b> y <b>Android</b>, con espacios, Essentials y poca RAM.<br>
+  <b>El navegador basado en Firefox, rápido y ligero, para Android y Windows.</b><br>
   Las funciones de <a href="https://github.com/zen-browser/desktop">Zen Browser</a> (espacios, Essentials, modo compacto)
-  con la estética de Safari.
+  con la estética de Safari, poca RAM y sincronización con tu cuenta de Firefox.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Saerling/kaze/releases"><img src="https://img.shields.io/github/v/release/Saerling/kaze?style=for-the-badge&label=versi%C3%B3n&color=111114" alt="Última versión"></a>
+  <a href="https://github.com/Saerling/kaze/releases"><img src="https://img.shields.io/github/downloads/Saerling/kaze/total?style=for-the-badge&label=descargas&color=111114" alt="Descargas"></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B-111114?style=for-the-badge&logo=android&logoColor=white" alt="Android 8.0+">
+  <img src="https://img.shields.io/badge/Windows-10%2B-111114?style=for-the-badge&logo=windows&logoColor=white" alt="Windows">
+  <img src="https://img.shields.io/badge/motor-Gecko-111114?style=for-the-badge&logo=firefoxbrowser&logoColor=white" alt="Gecko">
+</p>
+
+<p align="center">
+  <a href="https://github.com/Saerling/kaze/releases"><b>⬇ Descargar</b></a>
+  &nbsp;·&nbsp;
+  <a href="#instalar">Instalar con Orion Store</a>
+  &nbsp;·&nbsp;
+  <a href="#qué-tiene">Funciones</a>
 </p>
 
 <p align="center">
@@ -39,6 +55,7 @@
 | Contraseñas guardadas, uBlock Origin y complementos de Firefox | ✅ | ✅ |
 | Páginas de error propias, compartir desde las páginas, video en ventana flotante | — | ✅ |
 | Estilos visuales (Safari, Material You, Living Flow, Zen) y panel de Personalización | — | ✅ |
+| Biblioteca de animaciones y funciones (Magic UI, Motion Primitives, NumberFlow…), cada una con vista previa | — | ✅ |
 
 ## Estructura
 
@@ -50,7 +67,9 @@
 | [`branding/`](branding/) | Logo y generador de íconos. |
 | [`docs/`](docs/) | [Arquitectura](docs/ARQUITECTURA.md), [plan de trabajo](docs/ROADMAP.md) y capturas. |
 
-## Probar
+## Instalar
+
+- **Orion Store (Android):** busca *Fyx* en [Orion Store](https://github.com/RookieEnough/Orion-Store) y toca Instalar. Orion avisa de cada versión nueva.
 
 - **Android:** descarga el APK de [Releases](https://github.com/Saerling/kaze/releases) (`arm64-v8a`). Desde ahí la app se actualiza sola. Más en [`android/README.md`](android/README.md).
 - **Windows:** descarga `Fyx-0.4.N-setup.exe` de [Releases](https://github.com/Saerling/kaze/releases) y ábrelo. Se instala sin permisos de administrador y desde ahí Fyx se actualiza solo. Más en [`desktop/README.md`](desktop/README.md).
