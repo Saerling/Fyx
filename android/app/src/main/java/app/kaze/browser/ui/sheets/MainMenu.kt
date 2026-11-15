@@ -4,6 +4,10 @@
 
 package app.kaze.browser.ui.sheets
 
+import androidx.compose.material.icons.outlined.Search
+import app.kaze.browser.ui.comandosFyx
+import app.kaze.browser.fx.MenuComandos
+import app.kaze.browser.fx.fxOn
 import app.kaze.browser.ui.mochy.ActionCardColors
 import app.kaze.browser.ui.mochy.SheetActionCard
 import app.kaze.browser.ui.mochy.SheetActionCardRow
@@ -139,6 +143,9 @@ fun MainMenuSheet(tab: Tab, onDismiss: () -> Unit, a: MenuActions) {
             }
             Spacer(Modifier.height(14.dp))
             IosGroup {
+                if (fxOn("cmd")) { var cmd by remember { mutableStateOf(false) }
+                    IosRow("Comandos", Icons.Outlined.Search, onClick = { cmd = true })
+                    MenuComandos(cmd, comandosFyx(a), { cmd = false; onDismiss() }, "Buscar una acción…") }
                 IosRow("Favoritos y lista de lectura", Icons.AutoMirrored.Outlined.MenuBook, onClick = go(a.onLibrary))
                 IosRow("Pestañas cerradas recientemente", Icons.Outlined.Restore, onClick = go(a.onRecent))
                 if (store.profileSpaces.size > 1 && !tab.isPrivate) {

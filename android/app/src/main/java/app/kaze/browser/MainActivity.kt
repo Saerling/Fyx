@@ -4,6 +4,7 @@
 
 package app.kaze.browser
 
+import app.kaze.browser.ui.FxCapasFyx
 import app.kaze.browser.fx.Fx
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
@@ -270,7 +271,7 @@ class MainActivity : ComponentActivity() {
                 dark, s.uiStyle, s.accent, s.glassTransparency,
                 cornerRadius = s.cornerRadius, smoothCorners = s.smoothCorners, glassOn = s.glassOn,
             ) {
-                CompositionLocalProvider(LocalApp provides app) { Root() }
+                CompositionLocalProvider(LocalApp provides app) { androidx.compose.foundation.layout.Box { Root(); FxCapasFyx(dark) } }
             }
         }
     }

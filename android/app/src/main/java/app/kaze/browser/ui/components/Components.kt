@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.components
 
+import app.kaze.browser.fx.*
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -158,7 +159,7 @@ private fun LetterIcon(text: String, size: Dp, modifier: Modifier) {
 @Composable
 fun Modifier.tap(onClick: () -> Unit): Modifier {
     val source = remember { MutableInteractionSource() }
-    return pressFeedback(source).clickable(interactionSource = source, indication = null, onClick = onClick)
+    return pressFeedback(source).fx("ripple") { ondaAlTocar(androidx.compose.ui.graphics.Color.Gray) }.clickable(interactionSource = source, indication = null, onClick = onClick)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -166,7 +167,7 @@ fun Modifier.tap(onClick: () -> Unit): Modifier {
 fun Modifier.tap(onClick: () -> Unit, onLongClick: () -> Unit): Modifier {
     val source = remember { MutableInteractionSource() }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
-    return pressFeedback(source).combinedClickable(
+    return pressFeedback(source).fx("ripple") { ondaAlTocar(androidx.compose.ui.graphics.Color.Gray) }.combinedClickable(
         interactionSource = source, indication = null, onClick = onClick,
         // Mantener presionado se siente: una vibración corta, como en iOS y Android.
         onLongClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); onLongClick() },
@@ -196,7 +197,7 @@ fun IosSectionHeader(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun IosGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val k = LocalKaze.current
-    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp).card(k.shapeOf(k.cornerOr(if (k.material) 26 else 12))), content = content)
+    Column(modifier.fx("blurfade") { aparecerDifuso() }.fillMaxWidth().padding(horizontal = 16.dp).card(k.shapeOf(k.cornerOr(if (k.material) 26 else 12))), content = content)
 }
 
 @Composable

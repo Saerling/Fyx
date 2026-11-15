@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.ui.estiloDialogoFx
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.clickable
@@ -113,7 +114,7 @@ private fun Simple(
     onNo: () -> Unit,
 ) {
     val k = LocalKaze.current
-    AlertDialog(
+    AlertDialog(modifier = Modifier.estiloDialogoFx(),
         onDismissRequest = onNo,
         containerColor = k.paper,
         title = title?.takeIf { it.isNotBlank() }?.let { { Text(it, style = KazeType.body, color = k.ink) } },
@@ -140,7 +141,7 @@ private fun Field(value: String, onChange: (String) -> Unit, hint: String, passw
 private fun TextInput(title: String?, message: String?, initial: String, onOk: (String) -> Unit, onCancel: () -> Unit) {
     val k = LocalKaze.current
     var v by remember { mutableStateOf(initial) }
-    AlertDialog(
+    AlertDialog(modifier = Modifier.estiloDialogoFx(),
         onDismissRequest = onCancel, containerColor = k.paper,
         title = title?.takeIf { it.isNotBlank() }?.let { { Text(it, style = KazeType.body, color = k.ink) } },
         text = {
@@ -159,7 +160,7 @@ private fun Auth(p: PromptDelegate.AuthPrompt, onOk: (String, String) -> Unit, o
     val k = LocalKaze.current
     var user by remember { mutableStateOf(p.authOptions.username.orEmpty()) }
     var pass by remember { mutableStateOf(p.authOptions.password.orEmpty()) }
-    AlertDialog(
+    AlertDialog(modifier = Modifier.estiloDialogoFx(),
         onDismissRequest = onCancel, containerColor = k.paper,
         title = { Text("Iniciar sesión", style = KazeType.body, color = k.ink) },
         text = {
@@ -194,7 +195,7 @@ private fun Choice(p: PromptDelegate.ChoicePrompt, finish: (PromptDelegate.Promp
     }
     var chosen by remember { mutableStateOf(flat.filter { it.first.selected && it.second >= 0 }.map { it.first.id }.toSet()) }
 
-    AlertDialog(
+    AlertDialog(modifier = Modifier.estiloDialogoFx(),
         onDismissRequest = onCancel, containerColor = k.paper,
         title = p.title?.takeIf { it.isNotBlank() }?.let { { Text(it, style = KazeType.body, color = k.ink) } },
         text = {

@@ -14,6 +14,8 @@
 
 package app.kaze.browser.ui.mochy
 
+import app.kaze.browser.fx.SegmentadoDeslizante
+import app.kaze.browser.fx.fxOn
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -452,6 +454,7 @@ fun MiniSegmented(
     colors: CustomiseColors,
     enabled: Boolean = true,
 ) {
+    if (fxOn("segmented")) { androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides colors.text) { SegmentadoDeslizante(options, selectedIndex, { if (enabled) onSelect(it) }, color = colors.highlight) }; return }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()

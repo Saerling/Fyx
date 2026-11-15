@@ -4,6 +4,9 @@
 
 package app.kaze.browser.ui.screens
 
+import app.kaze.browser.ui.CabeceraInicioFx
+import app.kaze.browser.ui.FondoInicioFx
+import app.kaze.browser.fx.*
 import app.kaze.browser.zsync.ZenSync
 import app.kaze.browser.ui.components.FaviconTile
 import androidx.compose.ui.text.font.FontWeight
@@ -127,6 +130,7 @@ fun StartPage(
             if (private) listOf(0xFF3A3A55.toInt(), 0xFF2A2A40.toInt()) else space?.colors.orEmpty(),
             strength = if (private) 0.9f else 0.5f,
         )
+        if (!private) FondoInicioFx(Modifier.matchParentSize())
         Column(
             Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(top = 36.dp, bottom = 150.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -136,10 +140,10 @@ fun StartPage(
                 // Saludo y fecha: lo único grande de la página; el resto se ordena debajo.
                 val now = remember { java.util.Calendar.getInstance() }
                 val h = now.get(java.util.Calendar.HOUR_OF_DAY)
-                Text(
-                    if (private) "Navegación privada" else if (h < 12) "Buenos días" else if (h < 19) "Buenas tardes" else "Buenas noches",
-                    style = KazeType.largeTitle, color = k.ink,
-                )
+                if (!private) CabeceraInicioFx()
+                val saludo = if (private) "Navegación privada" else if (h < 12) "Buenos días" else if (h < 19) "Buenas tardes" else "Buenas noches"
+                if (fxOn("hypertext")) TextoBarajado(saludo, KazeType.largeTitle, color = k.ink)
+                else Text(saludo, style = KazeType.largeTitle, color = k.ink)
                 Text(
                     remember { java.text.SimpleDateFormat("EEEE d 'de' MMMM", java.util.Locale("es")).format(now.time).replaceFirstChar { it.uppercase() } },
                     style = KazeType.subhead, color = k.ink55, modifier = Modifier.padding(top = 2.dp),

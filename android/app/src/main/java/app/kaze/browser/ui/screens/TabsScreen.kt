@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.screens
 
+import app.kaze.browser.fx.*
 import app.kaze.browser.ui.mochy.press3D
 import androidx.compose.ui.platform.testTag
 import app.kaze.browser.ui.mochy.Chip
@@ -896,7 +897,7 @@ private fun PinnedGroups(tabs: List<Tab>, selectedId: String?, onOpen: (Tab) -> 
 }
 
 @Composable
-private fun TabCard(
+internal fun TabCard(
     compact: Boolean = false, tab: Tab, selected: Boolean, onOpen: () -> Unit, onMenu: () -> Unit, onClose: () -> Unit,
     drag: Modifier = Modifier, highlight: Boolean = false,
 ) {
@@ -917,6 +918,7 @@ private fun TabCard(
 
     Column(
         Modifier
+            .fx("tilt") { inclinar(8f) }.fx("magiccard") { foco() }.fx("glare") { destello() }
             .offset { IntOffset(dx.value.roundToInt(), 0) }
             .graphicsLayer {
                 alpha = (1f - (abs(dx.value) / 600f).coerceIn(0f, 0.7f)) * (1f - gone.value)

@@ -4,9 +4,11 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.ui.catalogoFyx
+import app.kaze.browser.ui.IdsFxFyx
+import app.kaze.browser.fx.*
 import app.kaze.browser.fx.Fx
 import app.kaze.browser.fx.BibliotecaFxPantalla
-import app.kaze.browser.fx.CatalogoFyx
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.launch
 import app.kaze.browser.zsync.ZenSync
@@ -200,8 +202,9 @@ private fun RemoveButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun Empty(text: String) {
+internal fun Empty(text: String) {
     val k = LocalKaze.current
+    if (fxOn("empty")) { androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides k.ink) { EstadoVacio(if (text.contains("historial")) "🕘" else "🔖", text, "Lo que visites aparecerá aquí.") }; return }
     Text(text, style = KazeType.subhead, color = k.ink55, modifier = Modifier.padding(horizontal = 32.dp, vertical = 28.dp))
 }
 
@@ -227,7 +230,7 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
     var fxLib by remember { mutableStateOf(false) }
     if (fxLib) androidx.compose.ui.window.Dialog({ fxLib = false }, androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         androidx.compose.material3.MaterialTheme(colorScheme = if (k.isDark) androidx.compose.material3.darkColorScheme(primary = k.accent, background = k.paper, onBackground = k.ink) else androidx.compose.material3.lightColorScheme(primary = k.accent, background = k.paper, onBackground = k.ink)) {
-            BibliotecaFxPantalla(CatalogoFyx, { fxLib = false })
+            BibliotecaFxPantalla(remember { catalogoFyx() }, { fxLib = false })
         }
     }
     var autoUpdates by remember { mutableStateOf(app.updater.autoCheck) }
@@ -277,7 +280,7 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
             IosGroup {
                 IosRow(
                     "Biblioteca de animaciones y funciones",
-                    subtitle = "${Fx.count(CatalogoFyx.map { it.id })} de ${CatalogoFyx.size} activas · Magic UI, Motion Primitives, NumberFlow y más",
+                    subtitle = "${Fx.count(IdsFxFyx)} de ${IdsFxFyx.size} activas · Magic UI, Motion Primitives, NumberFlow y más",
                     chevron = true, divider = false,
                 ) { fxLib = true }
             }

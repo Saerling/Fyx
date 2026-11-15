@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.fx.*
 import app.kaze.browser.ui.mochy.MochyModalSheet
 import app.kaze.browser.ui.mochy.SheetActionCard
 import app.kaze.browser.ui.mochy.SheetActionCardRow
@@ -139,7 +140,7 @@ fun KazeSheet(onDismiss: () -> Unit, full: Boolean = false, content: @Composable
             Box(Modifier.padding(top = 8.dp, bottom = 6.dp).size(36.dp, 5.dp).clip(CircleShape).background(k.ink.copy(alpha = 0.22f)))
         },
     ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp), content = content)
+        Column(Modifier.fillMaxWidth().fx("noise") { noise(.05f) }.navigationBarsPadding().padding(bottom = 16.dp), content = content)
     }
 }
 
@@ -180,6 +181,7 @@ object ClipboardBridge {
 @Composable
 fun KazeSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     val k = LocalKaze.current
+    if (fxOn("switch")) { InterruptorCoss(checked, onChange, color = k.accent); return }
     if (k.material) {
         // Interruptor de Material 3: pista del color principal y palomita en el círculo.
         Switch(
