@@ -892,10 +892,14 @@ fun ContextMenuSheet(
     onOpenNew: (String, Boolean) -> Unit,
     onShare: (String) -> Unit,
     onDownload: (String) -> Unit,
+    /** Dirección del video o audio pulsado (si lo hay). */
+    media: String? = null,
 ) {
     val app = LocalApp.current
     val k = LocalKaze.current
-    val target = link ?: image ?: return
+    val target = link ?: image ?: media
+    // Nada que ofrecer: se suelta la petición para que no quede colgada.
+    if (target == null) { androidx.compose.runtime.LaunchedEffect(Unit) { onDismiss() }; return }
     KazeSheet(onDismiss) {
         Text(
             title?.takeIf { it.isNotBlank() } ?: target, style = KazeType.footnote, color = k.ink55, maxLines = 2,
@@ -910,12 +914,18 @@ fun ContextMenuSheet(
                     app.db.addToReadingList(link, title.orEmpty()); app.ui.show("Añadido a la lista de lectura"); onDismiss()
                 }
                 IosRow("Copiar enlace", Icons.Outlined.ContentCopy) { ClipboardBridge.copy?.invoke(link); onDismiss() }
-                IosRow("Compartir enlace", Icons.Outlined.Share, divider = image != null) { onShare(link); onDismiss() }
+                IosRow("Compartir enlace", Icons.Outlined.Share) { onShare(link); onDismiss() }
+                IosRow("Descargar enlace", Icons.Outlined.Download, divider = image != null || media != null) { onDownload(link); onDismiss() }
             }
             if (image != null) {
                 IosRow("Abrir imagen en pestaña nueva", Icons.AutoMirrored.Outlined.OpenInNew) { onOpenNew(image, true); onDismiss() }
                 IosRow("Guardar imagen", Icons.Outlined.Download) { onDownload(image); onDismiss() }
-                IosRow("Copiar dirección de la imagen", Icons.Outlined.ContentCopy, divider = false) { ClipboardBridge.copy?.invoke(image); onDismiss() }
+                IosRow("Copiar dirección de la imagen", Icons.Outlined.ContentCopy, divider = media != null) { ClipboardBridge.copy?.invoke(image); onDismiss() }
+            }
+            if (media != null) {
+                IosRow("Abrir video o audio en pestaña nueva", Icons.AutoMirrored.Outlined.OpenInNew) { onOpenNew(media, true); onDismiss() }
+                IosRow("Guardar video o audio", Icons.Outlined.Download) { onDownload(media); onDismiss() }
+                IosRow("Copiar dirección", Icons.Outlined.ContentCopy, divider = false) { ClipboardBridge.copy?.invoke(media); onDismiss() }
             }
         }
     }

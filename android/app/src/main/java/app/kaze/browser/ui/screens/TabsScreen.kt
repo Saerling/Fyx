@@ -169,7 +169,13 @@ fun TabsScreen(
     val mode = app.settings.tabsView
     // En tableta caben más columnas.
     val tablet = app.ui.tablet
-    val cols = when (mode) { "list" -> if (tablet) 2 else 1; "compact" -> if (tablet) 6 else 3; else -> if (tablet) 4 else 2 }
+    // Pantallas anchas (840 dp o más: tableta horizontal, plegable abierto): una columna más para no estirar las tarjetas.
+    val wide = tablet && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840
+    val cols = when (mode) {
+        "list" -> if (wide) 3 else if (tablet) 2 else 1
+        "compact" -> if (wide) 8 else if (tablet) 6 else 3
+        else -> if (wide) 5 else if (tablet) 4 else 2
+    }
 
     // ── Arrastrar para ordenar y soltar encima para hacer carpetas ──
     val haptics = LocalHapticFeedback.current

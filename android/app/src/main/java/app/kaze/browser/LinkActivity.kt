@@ -14,10 +14,12 @@ class LinkActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val custom = intent.hasExtra(CustomTabsIntent.EXTRA_SESSION)
-        startActivity(
-            Intent(intent).setClass(this, if (custom) CustomTabActivity::class.java else MainActivity::class.java)
-                .apply { if (!custom) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
-        )
+        // Intent nuevo y limpio: solo la dirección y los extras (color de la barra, etc.). Las banderas de quien
+        // llama (varias tareas, documentos nuevos, permisos de lectura…) no se copian: podían abrir Fyx duplicado.
+        val forward = Intent(Intent.ACTION_VIEW, intent.data).setClass(this, if (custom) CustomTabActivity::class.java else MainActivity::class.java)
+        runCatching { intent.extras?.let(forward::putExtras) }
+        if (!custom) forward.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { startActivity(forward) }
         finish()
     }
 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carpetas que Fyx puede prestar a otra app al abrir una descarga (solo cuando no pudo guardarse en Descargas). -->
+<paths>
+    <external-files-path name="descargas" path="Download/" />
+    <files-path name="descargas_internas" path="descargas/" />
+</paths>

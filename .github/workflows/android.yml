@@ -49,7 +49,7 @@ jobs:
         run: |
           mkdir -p ../dist
           for abi in arm64-v8a armeabi-v7a x86_64; do
-            cp "app/build/outputs/apk/release/app-$abi-release.apk" "../dist/kaze-0.3.$KAZE_VERSION_CODE-$abi.apk"
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "../dist/kaze-0.4.$KAZE_VERSION_CODE-$abi.apk"
           done
           ls -la ../dist
 
@@ -69,7 +69,7 @@ jobs:
             git log -1 --pretty=format:'%s%n%n%b' | sed '/^Co-Authored-By/d;/^Claude-Session/d'
           } > ../notes.md
           gh release create "android-$KAZE_VERSION_CODE" ../dist/*.apk \
-            --title "Fyx Android 0.3.$KAZE_VERSION_CODE" \
+            --title "Fyx Android 0.4.$KAZE_VERSION_CODE" \
             --notes-file ../notes.md \
             --target "$GITHUB_SHA"
 

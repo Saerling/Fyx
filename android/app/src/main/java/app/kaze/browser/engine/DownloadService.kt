@@ -48,13 +48,24 @@ class DownloadService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         channel(this)
         val running = Kaze.get(this).downloads.items.filter { it.state == DownloadItem.State.RUNNING }
-        ServiceCompat.startForeground(
-            this, ID, progress(running),
-            if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
-        )
+        // Android puede negar el servicio si Fyx ya no está en pantalla: la descarga sigue igual, solo sin notificación.
+        val ok = runCatching {
+            ServiceCompat.startForeground(
+                this, ID, progress(running),
+                if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
+            )
+        }.isSuccess
+        if (!ok) { stopSelf(); return START_NOT_STICKY }
         main.removeCallbacks(tick)
         main.postDelayed(tick, 500)
         return START_NOT_STICKY
+    }
+
+    // Android 15+: límite diario para este tipo de servicio; si se agota hay que parar o el sistema cierra la app.
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        main.removeCallbacks(tick)
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     override fun onDestroy() {

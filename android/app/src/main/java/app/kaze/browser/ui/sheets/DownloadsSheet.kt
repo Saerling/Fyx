@@ -84,7 +84,7 @@ fun DownloadsSheet(onDismiss: () -> Unit) {
                 Modifier.padding(horizontal = 16.dp).clip(k.cardShape).background(k.card).animateContentSize(spring(0.9f, 400f)),
             ) {
                 list.forEachIndexed { i, d ->
-                    key(d.id) { DownloadRow(d, divider = i < list.lastIndex, onOpen = { open(context, d) }, onRemove = { app.downloads.remove(d) }) }
+                    key(d.id) { DownloadRow(d, divider = i < list.lastIndex, onOpen = { if (d.state == DownloadItem.State.FAILED) app.downloads.retry(d) else app.downloads.open(d) }, onRemove = { app.downloads.remove(d) }) }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -107,16 +107,6 @@ fun DownloadsSheet(onDismiss: () -> Unit) {
 @Composable
 private fun key(id: Long, content: @Composable () -> Unit) = androidx.compose.runtime.key(id) { content() }
 
-private fun open(context: android.content.Context, d: DownloadItem) {
-    val uri = d.uri ?: return
-    runCatching {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), d.mime)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-    }
-}
-
 @Composable
 private fun DownloadRow(d: DownloadItem, divider: Boolean, onOpen: () -> Unit, onRemove: () -> Unit) {
     val k = LocalKaze.current
@@ -132,7 +122,7 @@ private fun DownloadRow(d: DownloadItem, divider: Boolean, onOpen: () -> Unit, o
         else -> Icons.AutoMirrored.Outlined.InsertDriveFile
     }
     Column(
-        Modifier.fillMaxWidth().clickable(enabled = d.uri != null && !running, onClick = onOpen)
+        Modifier.fillMaxWidth().clickable(enabled = !running && (if (failed) d.url != null else d.uri != null), onClick = onOpen)
             .semantics { contentDescription = d.name },
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -146,7 +136,7 @@ private fun DownloadRow(d: DownloadItem, divider: Boolean, onOpen: () -> Unit, o
                 val size = { b: Long -> Formatter.formatShortFileSize(context, b) }
                 Text(
                     when {
-                        failed -> "No se pudo descargar"
+                        failed -> (d.error ?: "No se pudo descargar") + if (d.url != null) " · Toca para reintentar" else ""
                         running && d.total > 0 -> "${size(d.done)} de ${size(d.total)}"
                         running -> "Descargando… ${size(d.done)}"
                         else -> size(maxOf(d.done, d.total)) + " · " + android.text.format.DateUtils.getRelativeTimeSpanString(d.time)

@@ -20,7 +20,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = ciVersionCode ?: 2
-        versionName = "0.3.${ciVersionCode ?: 0}"
+        versionName = "0.4.${ciVersionCode ?: 0}"
         // Repositorio donde la app busca actualizaciones (GitHub Releases con etiqueta android-<versionCode>)
         buildConfigField("String", "UPDATE_REPO", "\"Saerling/kaze\"")
     }

@@ -42,6 +42,18 @@ object Urls {
     /** ¿Es una dirección web (http/https)? Lo único que aceptamos de otras apps. */
     fun isWeb(url: String): Boolean = url.startsWith("https://", true) || url.startsWith("http://", true)
 
+    /**
+     * Texto que llega de otra app (compartir, buscar, texto seleccionado): solo puede acabar en una web.
+     * Si trae un enlace http(s) se abre ese; si parece un dominio, ese sitio; cualquier otra cosa
+     * (incluidos file:, data:, javascript:…) se busca como texto.
+     */
+    fun fromExternal(text: String, engine: SearchEngine): String? {
+        val t = text.trim()
+        if (t.isEmpty()) return null
+        Regex("https?://\\S+", RegexOption.IGNORE_CASE).find(t)?.let { return it.value }
+        return fromInput(t, engine).takeIf(::isWeb) ?: engine.searchUrl(t)
+    }
+
     fun encode(q: String): String = URLEncoder.encode(q, "UTF-8")
 
     /** "https://www.ejemplo.com/a" → "ejemplo.com" */

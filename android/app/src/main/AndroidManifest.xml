@@ -42,6 +42,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <!-- Android y otras apps reconocen a Fyx como navegador -->
+                <category android:name="android.intent.category.APP_BROWSER" />
             </intent-filter>
 
             <intent-filter>
@@ -77,6 +79,18 @@
                 <data android:scheme="http" />
                 <data android:scheme="https" />
             </intent-filter>
+            <!-- Las apps que mandan el enlace junto con su tipo (text/html…) no encontraban a Fyx: un filtro
+                 sin tipo no coincide con ellas. Igual que Firefox para Android. Solo http/https. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:mimeType="text/html" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="application/xhtml+xml" />
+            </intent-filter>
         </activity>
 
         <activity
@@ -105,6 +119,17 @@
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
             tools:replace="android:screenOrientation" />
+
+        <!-- Presta a otra app (visor de PDF, galería…) una descarga guardada en la carpeta de Fyx, solo al abrirla. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.archivos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/rutas_archivos" />
+        </provider>
 
         <receiver
             android:name=".engine.UpdateReceiver"

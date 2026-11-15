@@ -87,6 +87,9 @@ import app.kaze.browser.data.TabKind
 import app.kaze.browser.data.Urls
 import app.kaze.browser.engine.WebNotifications
 import app.kaze.browser.engine.Engine
+import app.kaze.browser.engine.AndroidPermissions
+import app.kaze.browser.engine.AppLinks
+import app.kaze.browser.engine.FilePicker
 import app.kaze.browser.engine.PendingPrompt
 import app.kaze.browser.ui.components.LocalApp
 import app.kaze.browser.ui.screens.ChromeActions
@@ -127,8 +130,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
-import org.mozilla.geckoview.GeckoWebExecutor
-import org.mozilla.geckoview.WebRequest
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate
 import org.mozilla.geckoview.GeckoSession.PromptDelegate
 
@@ -150,56 +151,22 @@ class MainActivity : ComponentActivity() {
     /** Atajos de teclado (los pone la interfaz, que tiene acceso a pestañas y barra). */
     private var keyHandler: ((android.view.KeyEvent) -> Boolean)? = null
 
-    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
-        if (event.action == android.view.KeyEvent.ACTION_DOWN && (event.isCtrlPressed || event.isAltPressed || event.keyCode == android.view.KeyEvent.KEYCODE_F5) &&
-            keyHandler?.invoke(event) == true
-        ) return true
-        return super.onKeyDown(keyCode, event)
-    }
-
-    private var pendingFile: Pair<PromptDelegate.FilePrompt, PendingPrompt>? = null
-    private val fileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-        val (prompt, pending) = pendingFile ?: return@registerForActivityResult
-        pendingFile = null
-        val data = res.data
-        val uris = buildList {
-            data?.clipData?.let { c -> for (i in 0 until c.itemCount) add(c.getItemAt(i).uri) }
-            if (isEmpty()) data?.data?.let(::add)
+    // Antes de que la tecla llegue a la página: con el foco en la web, el motor se quedaba con Ctrl+T, Ctrl+L, etc.
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val shortcut = event.isCtrlPressed || event.isAltPressed ||
+            event.keyCode == android.view.KeyEvent.KEYCODE_F5 || event.keyCode == android.view.KeyEvent.KEYCODE_FORWARD
+        if (shortcut && event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0 && keyHandler?.invoke(event) == true) {
+            consumedKey = event.keyCode
+            return true
         }
-        if (uris.isEmpty()) { pending.dismiss(); return@registerForActivityResult }
-        // GeckoView no puede leer los enlaces content:// que devuelve el selector de Android: como Firefox
-        // para Android, se copian a una carpeta temporal y se le pasa el archivo. En segundo plano (archivos grandes).
-        Thread {
-            val files = uris.mapNotNull { runCatching { toUploadFile(it) }.getOrNull() }
-            runOnUiThread {
-                when {
-                    files.isEmpty() -> pending.dismiss()
-                    prompt.type == PromptDelegate.FilePrompt.Type.MULTIPLE -> pending.finish(prompt.confirm(this, files.toTypedArray()))
-                    else -> pending.finish(prompt.confirm(this, files.first()))
-                }
-            }
-        }.start()
+        // La tecla que se usó como atajo tampoco llega a la página al soltarla.
+        if (event.action == android.view.KeyEvent.ACTION_UP && event.keyCode == consumedKey) { consumedKey = -1; return true }
+        return super.dispatchKeyEvent(event)
     }
+    private var consumedKey = -1
 
-    /** Copia lo elegido a cache/subidas con su nombre original (las copias anteriores se borran). */
-    private fun toUploadFile(uri: android.net.Uri): android.net.Uri {
-        if (uri.scheme == "file") return uri
-        val dir = java.io.File(cacheDir, "subidas/${System.nanoTime()}").apply { mkdirs() }
-        java.io.File(cacheDir, "subidas").listFiles()?.filter { it != dir && it.lastModified() < System.currentTimeMillis() - 3_600_000 }?.forEach { it.deleteRecursively() }
-        val name = contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-            if (c.moveToFirst()) c.getString(0) else null
-        }?.replace('/', '_') ?: "archivo"
-        val out = java.io.File(dir, name)
-        contentResolver.openInputStream(uri)!!.use { input -> out.outputStream().use { input.copyTo(it, 64 * 1024) } }
-        return android.net.Uri.fromFile(out)
-    }
-
-    private var pendingPermission: PermissionDelegate.Callback? = null
-    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
-        val cb = pendingPermission ?: return@registerForActivityResult
-        pendingPermission = null
-        if (r.values.all { it }) cb.grant() else cb.reject()
-    }
+    private val filePicker = FilePicker(this)
+    private val androidPermissions = AndroidPermissions(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -236,18 +203,13 @@ class MainActivity : ComponentActivity() {
         geckoView = GeckoView(this).apply { visibility = View.INVISIBLE }
 
         app.pool.beforeClose = { s -> if (geckoView.session === s) geckoView.releaseSession() }
-        app.pool.externalOpener = ::openExternal
+        app.pool.externalOpener = { uri -> AppLinks.open(this, uri) }
         app.pool.sharer = { title, text, uri ->
             val body = listOfNotNull(text?.takeIf { it.isNotBlank() }, uri?.takeIf { it.isNotBlank() }).joinToString("\n")
             if (body.isBlank()) false else { share(body, title?.takeIf { it.isNotBlank() }); true }
         }
-        app.pool.androidPermissions = { perms, cb ->
-            val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
-            if (missing.isEmpty()) cb.grant() else {
-                pendingPermission = cb
-                permissionLauncher.launch(missing.toTypedArray())
-            }
-        }
+        app.pool.androidPermissions = androidPermissions::request
+        current = this
         ClipboardBridge.copy = { text ->
             getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Fyx", text))
             app.ui.show("Copiado")
@@ -321,8 +283,14 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         if (!::app.isInitialized) return super.onDestroy()
         if (geckoView.session != null) geckoView.releaseSession()
-        if (isFinishing) {
+        // Solo si esta sigue siendo la actividad en uso (al recrearse, la nueva ya puso los suyos):
+        // así la actividad destruida no queda retenida por el motor.
+        if (current === this) {
+            current = null
             app.pool.beforeClose = null
+            app.pool.externalOpener = null
+            app.pool.sharer = null
+            app.pool.androidPermissions = null
             ClipboardBridge.copy = null
         }
         super.onDestroy()
@@ -338,64 +306,28 @@ class MainActivity : ComponentActivity() {
         val url = when (intent?.action) {
             // Solo webs: otra app no puede abrirnos file://, content:// ni javascript: (leerían datos privados).
             Intent.ACTION_VIEW -> intent.dataString?.takeIf(Urls::isWeb)
-            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
-                Regex("https?://\\S+").find(text)?.value ?: Urls.fromInput(text, app.settings.searchEngine)
-            }
+            Intent.ACTION_SEND -> (intent.getStringExtra(Intent.EXTRA_TEXT) ?: intent.getStringExtra(Intent.EXTRA_SUBJECT))
+                ?.let { Urls.fromExternal(it, app.settings.searchEngine) }
             Intent.ACTION_WEB_SEARCH, Intent.ACTION_SEARCH ->
-                intent.getStringExtra(SearchManager.QUERY)?.let { Urls.fromInput(it, app.settings.searchEngine) }
+                intent.getStringExtra(SearchManager.QUERY)?.let { Urls.fromExternal(it, app.settings.searchEngine) }
             // Texto seleccionado en otra app → "Buscar en Fyx".
             Intent.ACTION_PROCESS_TEXT ->
-                intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }
-                    ?.let { Urls.fromInput(it, app.settings.searchEngine) }
+                intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()?.let { Urls.fromExternal(it, app.settings.searchEngine) }
             else -> null
         } ?: return
-        app.store.newTab(url)
+        // Lo que llega de otras apps nunca se mezcla con la navegación privada: va al primer espacio normal.
+        val store = app.store
+        val space = if (store.currentSpaceId == Space.PRIVATE_ID) store.profileSpaces.firstOrNull()?.id ?: store.currentSpaceId else store.currentSpaceId
+        // El mismo enlace ya abierto y a la vista (doble toque en otra app): no se duplica la pestaña.
+        val same = store.selectedTab?.takeIf { it.url == url && !it.isPrivate }
+        if (same != null) store.select(same) else store.newTab(url, spaceId = space)
         showTabs = false
-    }
-
-    private fun openExternal(uri: String): Boolean = try {
-        val intent = if (uri.startsWith("intent:")) {
-            Intent.parseUri(uri, Intent.URI_INTENT_SCHEME).apply {
-                addCategory(Intent.CATEGORY_BROWSABLE); component = null; selector = null
-            }
-        } else {
-            Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addCategory(Intent.CATEGORY_BROWSABLE)
-        }
-        startActivity(intent)
-        true
-    } catch (_: ActivityNotFoundException) {
-        // La app no está instalada: los enlaces intent: traen una dirección web de respaldo (va como extra, no en la consulta).
-        val fallback = if (uri.startsWith("intent:")) {
-            runCatching { Intent.parseUri(uri, Intent.URI_INTENT_SCHEME).getStringExtra("browser_fallback_url") }.getOrNull()
-        } else null
-        if (fallback != null && (fallback.startsWith("https://") || fallback.startsWith("http://"))) {
-            app.store.selectedTab?.let { t -> app.pool.ensure(t).loadUri(fallback) }
-            true // ya se resolvió: no mostrar "no hay una app"
-        } else false
-    } catch (_: Exception) {
-        false
     }
 
     private fun share(url: String, title: String? = null) {
         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url)
         title?.let { send.putExtra(Intent.EXTRA_SUBJECT, it) }
         startActivity(Intent.createChooser(send, null))
-    }
-
-    private fun openFilePicker(prompt: PromptDelegate.FilePrompt, pending: PendingPrompt) {
-        pendingFile = prompt to pending
-        val mimes = prompt.mimeTypes?.filter { it.contains('/') }.orEmpty()
-        val intent = Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).apply {
-            type = if (mimes.size == 1) mimes[0] else "*/*"
-            if (mimes.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
-            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, prompt.type == PromptDelegate.FilePrompt.Type.MULTIPLE)
-        }
-        try {
-            fileLauncher.launch(intent)
-        } catch (_: ActivityNotFoundException) {
-            pendingFile = null
-            pending.dismiss()
-        }
     }
 
     private fun restart() {
@@ -698,6 +630,10 @@ class MainActivity : ComponentActivity() {
                     e.isCtrlPressed && shift && e.keyCode == android.view.KeyEvent.KEYCODE_BACKSLASH -> { showTabsGrid(); true }
                     e.isAltPressed && e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT -> { actions?.onBack?.invoke(); true }
                     e.isAltPressed && e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> { actions?.onForward?.invoke(); true }
+                    // Botón "adelante" del ratón o del teclado.
+                    e.keyCode == android.view.KeyEvent.KEYCODE_FORWARD -> { actions?.onForward?.invoke(); true }
+                    e.isCtrlPressed && shift && e.keyCode == android.view.KeyEvent.KEYCODE_A -> { showTabsGrid(); true }
+                    e.isCtrlPressed && e.keyCode == android.view.KeyEvent.KEYCODE_P && shift -> { newTab(private = true); true }
                     else -> false
                 }
             }
@@ -711,7 +647,7 @@ class MainActivity : ComponentActivity() {
                 checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
             ) return@LaunchedEffect
             prefs.edit().putBoolean("notif", true).apply()
-            permissionLauncher.launch(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS))
+            androidPermissions.ask(android.Manifest.permission.POST_NOTIFICATIONS)
         }
 
         // Sincronización con el escritorio (si hay sesión): poco después de abrir, sin frenar el arranque.
@@ -1040,13 +976,17 @@ class MainActivity : ComponentActivity() {
                     },
                     onShare = { share(it) },
                     onDownload = { url ->
-                        GeckoWebExecutor(app.runtime).fetch(WebRequest(url)).accept { r -> r?.let(app.downloads::save) }
+                        app.downloads.fetch(url, private = req.tab.isPrivate, referrer = req.tab.url.takeIf { it.startsWith("http") })
+                    },
+                    media = req.element.srcUri.takeIf {
+                        req.element.type == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO ||
+                            req.element.type == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_AUDIO
                     },
                 )
             }
 
             // ── Diálogos de la página ──
-            ui.prompt?.let { p -> PromptHost(p, onDone = { ui.prompt = null }, onFile = ::openFilePicker) }
+            ui.prompt?.let { p -> PromptHost(p, onDone = { ui.prompt = null }, onFile = filePicker::open) }
             ui.permission?.let { p -> PermissionHost(p) { ui.permission = null } }
 
             // Aviso con la píldora y el movimiento de TopToast de Mochy (ui/mochy/TopToast.kt).
@@ -1065,6 +1005,11 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(ui.openSettings) {
             if (ui.openSettings) { settings = true; ui.openSettings = false }
         }
+    }
+
+    companion object {
+        /** La actividad que tiene puestos sus enlaces en el motor (ver onDestroy). */
+        private var current: MainActivity? = null
     }
 
     private fun find(tab: Tab, query: String, backwards: Boolean, restart: Boolean = false) {

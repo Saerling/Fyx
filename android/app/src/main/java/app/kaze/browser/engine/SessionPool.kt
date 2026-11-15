@@ -55,8 +55,27 @@ class SessionPool(
     /** Lo pone MainActivity: suelta la sesión del GeckoView antes de cerrarla. */
     var beforeClose: ((GeckoSession) -> Unit)? = null
 
-    /** Abre esquemas que no son web (tel:, mailto:, intent:, market:...) con otras apps. */
-    var externalOpener: ((String) -> Boolean)? = null
+    /** Abre esquemas que no son web (tel:, mailto:, intent:, market:...) con otras apps (lo pone MainActivity). */
+    var externalOpener: ((String) -> AppLinks.Result)? = null
+
+    /** Pestañas abiertas por una página (target=_blank, window.open) que aún no mostraron nada → la pestaña que las abrió. */
+    private val popups = HashMap<String, String>()
+
+    /**
+     * Si [tab] la abrió una página y sigue vacía (el enlace era una descarga o abría otra app), se cierra sola
+     * y se vuelve a la pestaña de origen, como hace Firefox: no queda una pestaña en blanco.
+     */
+    private fun closeIfEmptyPopup(tab: Tab) {
+        val parentId = popups.remove(tab.id) ?: return
+        main.post {
+            if (store.tabById(tab.id) == null) return@post
+            val wasSelected = store.selectedTabId == tab.id
+            close(tab)
+            store.close(tab)
+            store.recentlyClosed.removeAll { it.first == tab.url }
+            if (wasSelected) store.tabById(parentId)?.let(store::select)
+        }
+    }
 
     /** La pestaña que está en pantalla (activa). */
     var visibleTabId: String? = null
@@ -121,6 +140,9 @@ class SessionPool(
         val s = sessions.remove(tab.id) ?: return
         ports.remove(tab.id)
         playing.remove(tab.id)
+        popups.remove(tab.id)
+        // Si estaba en pantalla completa (video), se sale: si no, las barras se quedaban escondidas.
+        if (visibleTabId == tab.id) ui.fullscreen = false
         beforeClose?.invoke(s)
         s.setActive(false)
         s.close()
@@ -318,8 +340,8 @@ class SessionPool(
         s.progressDelegate = Progress(tab)
         s.navigationDelegate = Navigation(tab)
         s.historyDelegate = History(tab)
-        s.permissionDelegate = Permissions(tab)
-        s.promptDelegate = Prompts()
+        s.permissionDelegate = PagePermissions(ui) { androidPermissions }
+        s.promptDelegate = PagePrompts(ui) { sharer }
         s.scrollDelegate = object : ScrollDelegate {
             private var lastY = 0
             private var acc = 0
@@ -351,7 +373,7 @@ class SessionPool(
         }
 
         override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
-            ui.fullscreen = fullScreen
+            if (tab.id == visibleTabId || !fullScreen) ui.fullscreen = fullScreen
         }
 
         // La página pide que vuelvan las barras (por ejemplo, al enfocar un campo o llegar arriba).
@@ -364,7 +386,8 @@ class SessionPool(
         }
 
         override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
-            downloads.save(response)
+            downloads.save(response, private = tab.isPrivate, referrer = tab.url.takeIf { it.startsWith("http") })
+            closeIfEmptyPopup(tab)
         }
 
         override fun onCrash(session: GeckoSession) = recover("se cerró inesperadamente")
@@ -378,6 +401,7 @@ class SessionPool(
             lastCrash[tab.id] = now
             ports.remove(tab.id)
             playing.remove(tab.id)
+            if (wasVisible) ui.fullscreen = false
             sessions.remove(tab.id)?.let { s -> beforeClose?.invoke(s); runCatching { s.close() } }
             tab.isLive = false
             tab.loading = false
@@ -425,7 +449,10 @@ class SessionPool(
             hasUserGesture: Boolean,
         ) {
             // La página de error propia nunca reemplaza la dirección real de la pestaña.
-            if (url != null && !url.startsWith(ErrorPages.PREFIX)) store.onUrl(tab, url)
+            if (url != null && !url.startsWith(ErrorPages.PREFIX)) {
+                if (url != Urls.BLANK) popups.remove(tab.id) // ya mostró una página de verdad
+                store.onUrl(tab, url)
+            }
         }
 
         override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
@@ -447,8 +474,18 @@ class SessionPool(
                 return GeckoResult.fromValue(AllowOrDeny.DENY)
             }
             if (scheme in WEB_SCHEMES) return null
-            val opened = externalOpener?.invoke(request.uri) ?: false
-            if (!opened && scheme != "intent") ui.show("No hay una app para abrir este enlace")
+            // Otra app (teléfono, correo, WhatsApp, tienda…). Solo desde la pestaña que se está viendo:
+            // una pestaña en segundo plano no puede lanzar apps por su cuenta.
+            if (tab.id != visibleTabId && tab.id !in popups) return GeckoResult.fromValue(AllowOrDeny.DENY)
+            when (val r = externalOpener?.invoke(request.uri) ?: AppLinks.Result.None) {
+                AppLinks.Result.Opened -> closeIfEmptyPopup(tab)
+                // La app no está instalada, pero el enlace trae una dirección web de respaldo: se abre esa.
+                is AppLinks.Result.Web -> main.post { sessions[tab.id]?.loadUri(r.url) }
+                AppLinks.Result.None -> {
+                    ui.show(if (scheme == "intent") "No tienes instalada la app que abre este enlace" else "No hay una app para abrir este enlace")
+                    closeIfEmptyPopup(tab)
+                }
+            }
             return GeckoResult.fromValue(AllowOrDeny.DENY)
         }
 
@@ -466,7 +503,8 @@ class SessionPool(
             val s = newSession(child)
             sessions[child.id] = s
             child.isLive = true
-            main.post { store.select(child) }
+            popups[child.id] = tab.id
+            main.post { if (store.tabById(child.id) != null) store.select(child) }
             return GeckoResult.fromValue(s)
         }
     }
@@ -494,64 +532,6 @@ class SessionPool(
         }
     }
 
-    private inner class Permissions(private val tab: Tab) : PermissionDelegate {
-        override fun onContentPermissionRequest(
-            session: GeckoSession,
-            perm: PermissionDelegate.ContentPermission,
-        ): GeckoResult<Int> {
-            // Reproducción automática y almacenamiento: decisiones silenciosas, sin molestar.
-            when (perm.permission) {
-                PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE,
-                PermissionDelegate.PERMISSION_PERSISTENT_STORAGE,
-                PermissionDelegate.PERMISSION_STORAGE_ACCESS,
-                -> return GeckoResult.fromValue(PermissionDelegate.ContentPermission.VALUE_ALLOW)
-                PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE,
-                PermissionDelegate.PERMISSION_TRACKING,
-                PermissionDelegate.PERMISSION_XR,
-                -> return GeckoResult.fromValue(PermissionDelegate.ContentPermission.VALUE_DENY)
-            }
-            val result = GeckoResult<Int>()
-            if (perm.permission == PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION) {
-                // Si el usuario acepta, también hace falta el permiso de notificaciones de Android (13 o más).
-                val asked = GeckoResult<Int>()
-                asked.accept({ v ->
-                    if (v == PermissionDelegate.ContentPermission.VALUE_ALLOW && android.os.Build.VERSION.SDK_INT >= 33) {
-                        main.post {
-                            androidPermissions?.invoke(
-                                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                                object : PermissionDelegate.Callback {},
-                            )
-                        }
-                    }
-                    result.complete(v ?: PermissionDelegate.ContentPermission.VALUE_DENY)
-                }, { result.complete(PermissionDelegate.ContentPermission.VALUE_DENY) })
-                ui.permission = PermissionAsk.Content(Urls.displayHost(perm.uri), perm, asked)
-                return result
-            }
-            ui.permission = PermissionAsk.Content(Urls.displayHost(perm.uri), perm, result)
-            return result
-        }
-
-        override fun onMediaPermissionRequest(
-            session: GeckoSession,
-            uri: String,
-            video: Array<PermissionDelegate.MediaSource>?,
-            audio: Array<PermissionDelegate.MediaSource>?,
-            callback: PermissionDelegate.MediaCallback,
-        ) {
-            ui.permission = PermissionAsk.Media(Urls.displayHost(uri), video, audio, callback)
-        }
-
-        override fun onAndroidPermissionsRequest(
-            session: GeckoSession,
-            permissions: Array<String>?,
-            callback: PermissionDelegate.Callback,
-        ) {
-            val req = androidPermissions
-            if (permissions.isNullOrEmpty() || req == null) callback.grant() else req(permissions, callback)
-        }
-    }
-
     /** Lo pone MainActivity: abre el menú de compartir de Android (título, texto, enlace). Devuelve si se pudo abrir. */
     var sharer: ((String?, String?, String?) -> Boolean)? = null
 
@@ -561,42 +541,13 @@ class SessionPool(
     /** Lo pone MainActivity: pide permisos de Android (cámara, micrófono, ubicación). */
     var androidPermissions: ((Array<String>, PermissionDelegate.Callback) -> Unit)? = null
 
-    private inner class Prompts : PromptDelegate {
-        private fun <T : PromptDelegate.BasePrompt> ask(p: T): GeckoResult<PromptDelegate.PromptResponse> {
-            val result = GeckoResult<PromptDelegate.PromptResponse>()
-            ui.prompt?.dismiss()
-            ui.prompt = PendingPrompt(p, result)
-            return result
-        }
-
-        override fun onAlertPrompt(session: GeckoSession, prompt: PromptDelegate.AlertPrompt) = ask(prompt)
-        override fun onButtonPrompt(session: GeckoSession, prompt: PromptDelegate.ButtonPrompt) = ask(prompt)
-        override fun onTextPrompt(session: GeckoSession, prompt: PromptDelegate.TextPrompt) = ask(prompt)
-        override fun onAuthPrompt(session: GeckoSession, prompt: PromptDelegate.AuthPrompt) = ask(prompt)
-        override fun onChoicePrompt(session: GeckoSession, prompt: PromptDelegate.ChoicePrompt) = ask(prompt)
-        override fun onDateTimePrompt(session: GeckoSession, prompt: PromptDelegate.DateTimePrompt) = ask(prompt)
-        override fun onFilePrompt(session: GeckoSession, prompt: PromptDelegate.FilePrompt) = ask(prompt)
-        override fun onColorPrompt(session: GeckoSession, prompt: PromptDelegate.ColorPrompt) = ask(prompt)
-        override fun onPopupPrompt(session: GeckoSession, prompt: PromptDelegate.PopupPrompt) = ask(prompt)
-        override fun onBeforeUnloadPrompt(session: GeckoSession, prompt: PromptDelegate.BeforeUnloadPrompt) = ask(prompt)
-        // navigator.share(): el botón "Compartir" de las páginas abre el menú de compartir de Android.
-        override fun onSharePrompt(session: GeckoSession, prompt: PromptDelegate.SharePrompt): GeckoResult<PromptDelegate.PromptResponse> {
-            val ok = runCatching { sharer?.invoke(prompt.title, prompt.text, prompt.uri) ?: false }.getOrDefault(false)
-            val r = if (ok) PromptDelegate.SharePrompt.Result.SUCCESS else PromptDelegate.SharePrompt.Result.FAILURE
-            return GeckoResult.fromValue(prompt.confirm(r))
-        }
-        override fun onRepostConfirmPrompt(session: GeckoSession, prompt: PromptDelegate.RepostConfirmPrompt) = ask(prompt)
-        // Contraseñas: preguntar si guardar; al rellenar con una sola cuenta, se usa directamente.
-        override fun onLoginSave(session: GeckoSession, request: PromptDelegate.AutocompleteRequest<org.mozilla.geckoview.Autocomplete.LoginSaveOption>) = ask(request)
-        override fun onLoginSelect(session: GeckoSession, request: PromptDelegate.AutocompleteRequest<org.mozilla.geckoview.Autocomplete.LoginSelectOption>) = ask(request)
-    }
-
     companion object {
         private const val TAG = "FyxSessions"
         private const val CRASH_LOOP_MS = 20_000L
         private val ADDON_HOSTS = setOf("addons.mozilla.org", "addons.cdn.mozilla.net")
         private val WEB_SCHEMES = setOf(
             "http", "https", "about", "data", "blob", "file", "javascript", "moz-extension", "resource", "view-source",
+            "ws", "wss", "content", "jar",
         )
     }
 }

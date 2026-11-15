@@ -34,4 +34,14 @@ class UrlsTest {
         assertEquals("cielo", Urls.searchTermsOf("https://www.startpage.com/sp/search?query=cielo", SearchEngine.STARTPAGE))
         assertEquals(null, Urls.searchTermsOf("https://github.com/?q=x", ddg))
     }
+
+    @Test fun textoDeOtrasApps() {
+        assertEquals("https://x.com/a", Urls.fromExternal("Mira esto https://x.com/a", ddg))
+        assertEquals("https://wikipedia.org", Urls.fromExternal(" wikipedia.org ", ddg))
+        // Nada que no sea web: se busca como texto.
+        listOf("file:///data/data/app/x", "javascript:alert(1)", "data:text/html,hola", "about:config").forEach {
+            assertTrue(it, Urls.fromExternal(it, ddg)!!.startsWith("https://duckduckgo.com/?q="))
+        }
+        assertEquals(null, Urls.fromExternal("   ", ddg))
+    }
 }

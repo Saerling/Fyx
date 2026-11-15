@@ -69,7 +69,7 @@ class Kaze private constructor(context: Context) {
     val store = Store(db, settings).apply { load() }
     val ui = BrowserUi()
     val favicons = Favicons(context)
-    val downloads = Downloads(context, ui)
+    val downloads = Downloads(context, ui) { runtime }
     val updater = Updater(context)
 
     /** El motor se crea al primer uso (la pantalla de espacios se dibuja antes, el arranque se siente más rápido). */
