@@ -94,7 +94,7 @@ android {
 dependencies {
     implementation(libs.geckoview)
     implementation("androidx.security:security-crypto:1.1.0")
-    implementation("androidx.browser:browser:1.8.0")
+    implementation("androidx.browser:browser:1.10.0")
     // Lector de códigos QR (ZXing, código abierto, no necesita servicios de Google).
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
