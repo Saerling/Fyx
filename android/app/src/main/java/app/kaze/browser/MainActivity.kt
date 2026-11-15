@@ -4,6 +4,8 @@
 
 package app.kaze.browser
 
+import app.kaze.browser.ui.AperturaPuntos
+import app.kaze.browser.ui.PuntosIcono
 import app.kaze.browser.ui.FxCapasFyx
 import app.kaze.browser.fx.Fx
 import androidx.compose.foundation.layout.heightIn
@@ -241,7 +243,7 @@ class MainActivity : ComponentActivity() {
                         Root(); FxCapasFyx(dark)
                         // Apertura de puntos: solo al abrir Fyx desde su icono (nunca al llegar con un enlace, ni al girar).
                         var apertura by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(aperturaAlAbrir && s.animationsOn && AppMotion.durationScale.scaleFactor > 0f) }
-                        if (apertura) app.kaze.browser.ui.AperturaPuntos(app.kaze.browser.ui.PuntosIcono, "Fyx") { apertura = false }
+                        if (apertura) AperturaPuntos(PuntosIcono, "Fyx") { apertura = false }
                     }
                 }
             }
