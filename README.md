@@ -11,15 +11,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Saerling/kaze/releases"><img src="https://img.shields.io/github/v/release/Saerling/kaze?style=for-the-badge&label=versi%C3%B3n&color=111114" alt="Última versión"></a>
-  <a href="https://github.com/Saerling/kaze/releases"><img src="https://img.shields.io/github/downloads/Saerling/kaze/total?style=for-the-badge&label=descargas&color=111114" alt="Descargas"></a>
+  <a href="https://github.com/Saerling/Fyx/releases"><img src="https://img.shields.io/github/v/release/Saerling/Fyx?style=for-the-badge&label=versi%C3%B3n&color=111114" alt="Última versión"></a>
+  <a href="https://github.com/Saerling/Fyx/releases"><img src="https://img.shields.io/github/downloads/Saerling/Fyx/total?style=for-the-badge&label=descargas&color=111114" alt="Descargas"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B-111114?style=for-the-badge&logo=android&logoColor=white" alt="Android 8.0+">
   <img src="https://img.shields.io/badge/Windows-10%2B-111114?style=for-the-badge&logo=windows&logoColor=white" alt="Windows">
   <img src="https://img.shields.io/badge/motor-Gecko-111114?style=for-the-badge&logo=firefoxbrowser&logoColor=white" alt="Gecko">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Saerling/kaze/releases"><b>⬇ Descargar</b></a>
+  <a href="https://github.com/Saerling/Fyx/releases"><b>⬇ Descargar</b></a>
   &nbsp;·&nbsp;
   <a href="#instalar">Instalar con Orion Store</a>
   &nbsp;·&nbsp;
@@ -71,8 +71,8 @@
 
 - **Orion Store (Android):** busca *Fyx* en [Orion Store](https://github.com/RookieEnough/Orion-Store) y toca Instalar. Orion avisa de cada versión nueva.
 
-- **Android:** descarga el APK de [Releases](https://github.com/Saerling/kaze/releases) (`arm64-v8a`). Desde ahí la app se actualiza sola. Más en [`android/README.md`](android/README.md).
-- **Windows:** descarga `Fyx-0.4.N-setup.exe` de [Releases](https://github.com/Saerling/kaze/releases) y ábrelo. Se instala sin permisos de administrador y desde ahí Fyx se actualiza solo. Más en [`desktop/README.md`](desktop/README.md).
+- **Android:** descarga el APK de [Releases](https://github.com/Saerling/Fyx/releases) (`arm64-v8a`). Desde ahí la app se actualiza sola. Más en [`android/README.md`](android/README.md).
+- **Windows:** descarga `Fyx-0.4.N-setup.exe` de [Releases](https://github.com/Saerling/Fyx/releases) y ábrelo. Se instala sin permisos de administrador y desde ahí Fyx se actualiza solo. Más en [`desktop/README.md`](desktop/README.md).
 
 ## Licencia
 
