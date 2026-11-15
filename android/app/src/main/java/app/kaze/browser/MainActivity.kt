@@ -326,7 +326,8 @@ class MainActivity : ComponentActivity() {
             return
         }
         val url = when (intent?.action) {
-            Intent.ACTION_VIEW -> intent.dataString
+            // Solo webs: otra app no puede abrirnos file://, content:// ni javascript: (leerían datos privados).
+            Intent.ACTION_VIEW -> intent.dataString?.takeIf(Urls::isWeb)
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
                 Regex("https?://\\S+").find(text)?.value ?: Urls.fromInput(text, app.settings.searchEngine)
             }

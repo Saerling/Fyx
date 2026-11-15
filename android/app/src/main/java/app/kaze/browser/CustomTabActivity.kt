@@ -69,7 +69,7 @@ class CustomTabActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val start = intent.dataString ?: return finish()
+        val start = intent.dataString?.takeIf(Urls::isWeb) ?: return finish()
         url = start
         val app = Kaze.get(this)
         val s = GeckoSession(GeckoSessionSettings.Builder().useTrackingProtection(true).build())

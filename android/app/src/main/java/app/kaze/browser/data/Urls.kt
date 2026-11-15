@@ -39,6 +39,9 @@ object Urls {
         return engine.searchUrl(t)
     }
 
+    /** ¿Es una dirección web (http/https)? Lo único que aceptamos de otras apps. */
+    fun isWeb(url: String): Boolean = url.startsWith("https://", true) || url.startsWith("http://", true)
+
     fun encode(q: String): String = URLEncoder.encode(q, "UTF-8")
 
     /** "https://www.ejemplo.com/a" → "ejemplo.com" */

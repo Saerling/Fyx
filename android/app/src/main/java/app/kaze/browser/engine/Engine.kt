@@ -28,6 +28,10 @@ object Engine {
 
     /** Preferencias de Gecko pensadas para gastar poca RAM sin perder velocidad. */
     private val PREFS = linkedMapOf<String, Any>(
+        // HTTPS primero: intenta siempre la versión segura y solo baja a HTTP si la web no la tiene (como Firefox).
+        "dom.security.https_first" to true,
+        // En pestañas privadas, solo HTTPS (avisa antes de abrir una web sin cifrar).
+        "dom.security.https_only_mode_pbm" to true,
         // Páginas completas guardadas en RAM para el botón "atrás" (por defecto hasta 8).
         "browser.sessionhistory.max_total_viewers" to 1,
         // Caché de red en memoria limitada a 16 MB (el resto va a disco).
