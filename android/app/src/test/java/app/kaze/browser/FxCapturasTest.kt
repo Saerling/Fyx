@@ -38,7 +38,6 @@ class FxCapturasTest(private val id: String) {
     @Test fun captura() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val app = Kaze.get(ctx)
-        if (app.store.tabs.isEmpty()) app.store.newTab("https://es.wikipedia.org/wiki/Aurora_polar", select = true).title = "Aurora polar"
         Fx.init(ctx)
         compose.mainClock.autoAdvance = false
         compose.setContent {
