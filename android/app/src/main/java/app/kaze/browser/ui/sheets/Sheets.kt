@@ -936,6 +936,7 @@ private fun ProfileDialog(
     var confirmDelete by remember { mutableStateOf(false) }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = app.kaze.browser.ui.estiloDialogoFxM(),
         containerColor = k.paper,
         title = { Text(if (profile == null) "Nuevo perfil" else "Editar perfil", style = KazeType.headline, color = k.ink) },
         text = {

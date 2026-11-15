@@ -215,12 +215,12 @@ fun IosRow(
     onClick: (() -> Unit)? = null,
 ) {
     val k = LocalKaze.current
-    Column {
+    Column(Modifier.fx("animatedlist") { aparecerDifuso() }) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = if (k.material) 58.dp else 46.dp)
-                .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
+                .then(if (onClick != null && enabled) Modifier.fx("ripple") { ondaAlTocar(k.ink) }.clickable(onClick = onClick) else Modifier)
                 .alpha(if (enabled) 1f else 0.4f)
                 .padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
             verticalAlignment = Alignment.CenterVertically,

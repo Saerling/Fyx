@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.ui.estiloDialogoFxM
 import app.kaze.browser.ui.catalogoFyx
 import app.kaze.browser.ui.IdsFxFyx
 import app.kaze.browser.fx.*
@@ -667,7 +668,7 @@ private fun ZenSyncSection() {
         val close = what == "close"
         val n = ids.size
         androidx.compose.material3.AlertDialog(
-            onDismissRequest = { confirm = null }, containerColor = k.paper,
+            onDismissRequest = { confirm = null }, modifier = estiloDialogoFxM(), containerColor = k.paper,
             title = { Text(if (close) "¿Cerrar $n fijadas en este teléfono?" else "¿Borrar $n fijadas en el escritorio?", style = KazeType.headline, color = k.ink) },
             text = {
                 Text(

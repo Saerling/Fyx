@@ -145,6 +145,7 @@ private fun ToastPill(toast: TopToast, active: Boolean, onDismiss: (Long) -> Uni
             .shadow(14.dp, RoundedCornerShape(30.dp), clip = false, ambientColor = Color.Black, spotColor = Color.Black)
             .clip(RoundedCornerShape(30.dp))
             .background(ToastCard)
+            .then(app.kaze.browser.ui.estiloAvisoFx(accent))
             .semantics { liveRegion = LiveRegionMode.Polite }
             .pointerInput(toast.id, active) {
                 if (!active) return@pointerInput

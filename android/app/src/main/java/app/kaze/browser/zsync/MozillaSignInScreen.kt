@@ -394,7 +394,8 @@ fun MozillaSignInScreen(onFinishLogin: suspend (FxAWebLogin) -> Unit, onCancel: 
                 },
                 modifier = Modifier.fillMaxSize(),
             )
-            if (finishing) androidx.compose.material3.CircularProgressIndicator(Modifier.align(Alignment.Center), color = k.accent)
+            if (finishing && app.kaze.browser.fx.fxOn("spinner")) app.kaze.browser.fx.Girador(Modifier.align(Alignment.Center).size(40.dp), k.accent)
+            else if (finishing) androidx.compose.material3.CircularProgressIndicator(Modifier.align(Alignment.Center), color = k.accent)
         }
     }
 }

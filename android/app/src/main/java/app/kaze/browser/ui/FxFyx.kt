@@ -112,7 +112,7 @@ fun comandosFyx(a: MenuActions): List<Pair<String, () -> Unit>> = listOf(
     }
 }
 
-val IdsFxFyx = listOf("blurfade", "noise", "ripple", "switch", "segmented", "empty", "dialogs", "wordrotate", "borderbeam", "nf_tabs",
+val IdsFxFyx = listOf("blurfade", "animatedlist", "noise", "ripple", "switch", "checkbox", "segmented", "empty", "dialogs", "toast", "progress", "spinner", "searchinput", "wordrotate", "morphingtext", "borderbeam", "nf_tabs", "nf_download",
     "tilt", "magiccard", "glare", "bgs", "lightrays", "ioslock", "hello", "hypertext", "cmd", "onboarding")
 
 /** El catálogo de Fyx. Cada vista usa las piezas reales del navegador. */
@@ -124,22 +124,30 @@ fun catalogoFyx(): List<FxItem> {
             var k by remember { mutableIntStateOf(0) }
             Column { key(k) { IosGroup { IosRow("Buscador", Icons.Outlined.Search); IosRow("Privacidad", Icons.Outlined.Lock, divider = false) } }; TextButton({ k++ }) { Text("Repetir") } }
         },
-        i("noise", "Noise Texture", "Magic UI", "Grano fino en todas las hojas (Ajustes, menú, pestañas cerradas…)") { var v by remember { mutableStateOf(false) }; TextButton({ v = true }) { Text("Abrir una hoja") }
+        i("noise", "Noise Texture", "Magic UI", "Grano fino en todas las hojas (Ajustes, menú, descargas, pestañas cerradas…)") { var v by remember { mutableStateOf(false) }; TextButton({ v = true }) { Text("Abrir una hoja") }
             if (v) KazeSheet({ v = false }) { SheetTitle("Hoja de ejemplo", "OK") { v = false }; IosGroup { IosRow("Descargas", Icons.Outlined.Download, divider = false) } } },
-        i("ripple", "Ripple Button", "Magic UI", "Onda desde el dedo en los botones de la barra y los accesos") { GlassCircle(Icons.Outlined.Refresh, "Recargar", onClick = {}) },
+        i("ripple", "Ripple Button", "Magic UI", "Onda desde el dedo en los botones de la barra, los accesos y todas las filas de Ajustes y listas") { GlassCircle(Icons.Outlined.Refresh, "Recargar", onClick = {}) },
         i("switch", "Switch", "coss ui", "Los interruptores de Ajustes con el estilo de coss") { var a by remember { mutableStateOf(true) }; IosGroup { IosRow("Bloquear rastreadores", Icons.Outlined.Shield, divider = false, trailing = { KazeSwitch(a) { a = it } }) } },
         i("segmented", "Segmented Control + Animated Background", "coss ui", "Los selectores de Personalización con indicador que se desliza") {
             val k = LocalKaze.current; var s by remember { mutableIntStateOf(0) }
             app.kaze.browser.ui.mochy.MiniSegmented(listOf("Redondas", "Continuas"), s, { s = it }, app.kaze.browser.ui.mochy.CustomiseColors(k.card, k.lift, k.ink, k.ink55, k.accent.copy(alpha = .35f), k.accent))
         },
         i("empty", "Empty", "coss ui", "El historial y las listas vacías con ícono y animación") { Empty("Aún no hay historial.") },
-        i("dialogs", "Dialogs 01–12", "blocks.so", "Los avisos y preguntas de las páginas web con el estilo que elijas (12)") {
+        i("dialogs", "Dialogs 01–12", "blocks.so", "Todos los diálogos (avisos de páginas, perfiles, fijadas) con el estilo que elijas (12)") {
             var v by remember { mutableStateOf(false) }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Variantes("dialogs", (1..12).map { "Estilo %02d".format(it) }); TextButton({ v = true }) { Text("Abrir un aviso de página") } }
             if (v) AlertDialog({ v = false }, { TextButton({ v = false }) { Text("Aceptar") } }, Modifier.estiloDialogoFx(), { TextButton({ v = false }) { Text("Cancelar") } },
                 title = { Text("ejemplo.com dice") }, text = { Text("¿Quieres salir de esta página? Los cambios no guardados se perderán.") })
         },
-        i("wordrotate", "Word Rotate / Text Loop", "Magic UI", "El texto «Buscar o escribir dirección» de la barra va rotando ideas") { val k = LocalKaze.current; Capsula { TextoRotando(listOf("Buscar o escribir dirección", "Buscar noticias", "Buscar recetas", "Buscar videos", "Buscar manga"), KazeType.body, color = k.ink55) } },
+        i("animatedlist", "Animated List", "Magic UI", "Cada fila de Ajustes, historial, favoritos y búsqueda entra con su propia animación") { var k by remember { mutableIntStateOf(0) }; Column { key(k) { IosGroup { IosRow("Hoy · ejemplo.com", Icons.Outlined.History); IosRow("Ayer · wikipedia.org", Icons.Outlined.History, divider = false) } }; TextButton({ k++ }) { Text("Repetir") } } },
+        i("checkbox", "Checkbox", "coss ui", "Las casillas de las listas de opciones de las páginas web con el estilo de coss") { var a by remember { mutableStateOf(true) }; Row(Modifier.tap { a = !a }, verticalAlignment = Alignment.CenterVertically) { CasillaCoss(a, color = LocalKaze.current.accent); Text("  Recordar en este sitio", color = LocalKaze.current.ink) } },
+        i("toast", "Toast", "coss ui", "Los avisos que bajan desde arriba llevan grano y un haz de luz en el borde") { val app = LocalApp.current; TextButton({ app.ui.show("Enlace copiado") }) { Text("Mostrar un aviso") } },
+        i("progress", "Progress", "coss ui", "La carga de las páginas y las descargas con barras de degradado de coss") { val k = LocalKaze.current; var f by remember { mutableFloatStateOf(.3f) }; LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(600); f = (f + .12f) % 1f } }; Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { BarraProgresoCoss(f, color = k.accent, pista = k.lift); BarraProgresoCoss(null, color = k.accent, pista = k.lift) } },
+        i("spinner", "Spinner", "coss ui", "El indicador de carga al iniciar sesión con tu cuenta de Firefox") { Girador(Modifier.size(40.dp), LocalKaze.current.accent) },
+        i("searchinput", "Search Input", "opensourceui", "La barra de búsqueda (al escribir una dirección) con un haz de luz alrededor") { val k = LocalKaze.current; Capsula { Box(Modifier.matchParentSize().hazBorde(23.dp, k.accent)); Text("Buscar o escribir dirección", style = KazeType.body, color = k.ink55) } },
+        i("morphingtext", "Morphing Text", "Magic UI", "El texto de ejemplo de la barra cambia con un fundido que se transforma") { val k = LocalKaze.current; Capsula { TextoRotando(listOf("Buscar o escribir dirección", "Buscar noticias", "Buscar recetas", "Buscar videos"), KazeType.body, color = k.ink55, morph = true) } },
+        i("nf_download", "NumberFlow en descargas", "NumberFlow", "El % de cada descarga en curso rueda dígito a dígito") { val k = LocalKaze.current; var n by remember { mutableIntStateOf(37) }; LaunchedEffect(Unit) { while (n < 100) { kotlinx.coroutines.delay(250); n += 3 } }; NumeroFlow(n.coerceAtMost(100), KazeType.headline, color = k.accent, sufijo = " %") },
+        i("wordrotate", "Word Rotate", "Magic UI", "El texto «Buscar o escribir dirección» de la barra va rotando ideas") { val k = LocalKaze.current; Capsula { TextoRotando(listOf("Buscar o escribir dirección", "Buscar noticias", "Buscar recetas", "Buscar videos", "Buscar manga"), KazeType.body, color = k.ink55) } },
         i("borderbeam", "Border Beam / Border Trail", "Magic UI", "Un haz de luz recorre la barra de dirección mientras carga la página") { val k = LocalKaze.current; Capsula { Box(Modifier.matchParentSize().hazBorde(23.dp, k.accent)); Text("fyx.app", style = KazeType.body, color = k.ink) } },
         i("nf_tabs", "Contador de pestañas", "NumberFlow", "El número del botón de pestañas rueda al abrir o cerrar") { var n by remember { mutableIntStateOf(3) }; Row(verticalAlignment = Alignment.CenterVertically) { TabsButton(n, {}, {}); TextButton({ n++ }) { Text("Abrir pestaña") }; TextButton({ n = (n - 1).coerceAtLeast(1) }) { Text("Cerrar") } } },
         i("tilt", "Tilt", "Motion Primitives", "Las tarjetas de la vista de pestañas se inclinan bajo el dedo") { TarjetaPestana() },
@@ -167,3 +175,11 @@ private fun TarjetaPestana() {
     if (tab == null) { Text("Abre una pestaña para ver aquí su tarjeta.", color = LocalKaze.current.ink55); return }
     Box(Modifier.width(170.dp)) { TabCard(tab = tab, selected = true, onOpen = {}, onMenu = {}, onClose = {}) }
 }
+
+// ───────────── Puntos de enganche ─────────────
+
+/** Diálogos de Material del navegador: el estilo elegido (Dialogs 01–12). */
+fun estiloDialogoFxM(): Modifier = Modifier.estiloDialogoFx()
+
+/** Avisos de arriba (Toast de coss): grano y haz de luz en el borde. */
+fun estiloAvisoFx(acento: androidx.compose.ui.graphics.Color): Modifier = Modifier.composed { if (fxOn("toast")) Modifier.noise(.06f).hazBorde(30.dp, acento) else Modifier }

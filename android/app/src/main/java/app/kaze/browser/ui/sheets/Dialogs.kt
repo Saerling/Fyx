@@ -4,6 +4,7 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.fx.*
 import app.kaze.browser.ui.estiloDialogoFx
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -212,7 +213,8 @@ private fun Choice(p: PromptDelegate.ChoicePrompt, finish: (PromptDelegate.Promp
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (multiple) {
-                                Checkbox(
+                                if (fxOn("checkbox")) CasillaCoss(c.id in chosen, color = k.accent)
+                                else Checkbox(
                                     checked = c.id in chosen, onCheckedChange = null,
                                     colors = CheckboxDefaults.colors(checkedColor = k.accent, uncheckedColor = k.ink55),
                                 )

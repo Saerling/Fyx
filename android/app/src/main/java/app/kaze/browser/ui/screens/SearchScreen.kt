@@ -4,6 +4,8 @@
 
 package app.kaze.browser.ui.screens
 
+import app.kaze.browser.fx.fxOn
+import app.kaze.browser.fx.hazBorde
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -223,7 +225,7 @@ fun SearchScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
-                    Modifier.weight(1f).height(44.dp).liftCard(RoundedCornerShape(12.dp)).padding(start = 12.dp, end = 4.dp),
+                    Modifier.weight(1f).height(44.dp).liftCard(RoundedCornerShape(12.dp)).then(if (fxOn("searchinput")) Modifier.hazBorde(12.dp, k.accent) else Modifier).padding(start = 12.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Outlined.Search, null, tint = k.ink55, modifier = Modifier.size(18.dp))

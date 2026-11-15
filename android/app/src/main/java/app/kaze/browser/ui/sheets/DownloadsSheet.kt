@@ -4,6 +4,9 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.fx.fxOn
+import app.kaze.browser.fx.BarraProgresoCoss
+import app.kaze.browser.fx.NumeroFlow
 import android.content.Intent
 import android.net.Uri
 import android.text.format.Formatter
@@ -153,7 +156,12 @@ private fun DownloadRow(d: DownloadItem, divider: Boolean, onOpen: () -> Unit, o
                 // Barra de progreso que avanza suave (y se esconde con una animación al terminar).
                 AnimatedVisibility(running, enter = fadeIn() + expandVertically(), exit = fadeOut(tween(200)) + shrinkVertically(tween(250))) {
                     val p by animateFloatAsState(if (d.total > 0) (d.done.toFloat() / d.total).coerceIn(0f, 1f) else 0.15f, spring(0.9f, 200f), label = "dl")
-                    Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)).background(k.lift)) {
+                    if (fxOn("progress") || fxOn("nf_download")) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (fxOn("progress")) BarraProgresoCoss(if (d.total > 0) p else null, Modifier.weight(1f), k.accent, k.lift)
+                        else Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(50)).background(k.lift)) { Box(Modifier.fillMaxWidth(p).height(4.dp).clip(RoundedCornerShape(50)).background(k.accent)) }
+                        if (fxOn("nf_download") && d.total > 0) NumeroFlow((p * 100).toInt(), KazeType.footnote, Modifier.padding(start = 8.dp), k.accent, sufijo = " %")
+                    }
+                    else Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)).background(k.lift)) {
                         Box(Modifier.fillMaxWidth(p).height(4.dp).clip(RoundedCornerShape(50)).background(k.accent))
                     }
                 }

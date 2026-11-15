@@ -236,7 +236,8 @@ private fun CollapsedBar(tab: Tab, space: Space?, onExpand: () -> Unit) {
     ) {
         val progress by animateFloatAsState(tab.progress / 100f, tween(160), label = "progressMini")
         Box(Modifier.fillMaxWidth().height(2.dp)) {
-            if (tab.loading) Box(Modifier.fillMaxWidth(progress.coerceIn(0.05f, 1f)).height(2.dp).background(k.accent))
+            if (tab.loading && app.kaze.browser.fx.fxOn("progress")) app.kaze.browser.fx.BarraProgresoCoss(progress.coerceIn(0.05f, 1f), Modifier.height(2.dp), k.accent)
+            else if (tab.loading) Box(Modifier.fillMaxWidth(progress.coerceIn(0.05f, 1f)).height(2.dp).background(k.accent))
         }
         Row(
             Modifier.fillMaxWidth().height(30.dp),
@@ -567,7 +568,7 @@ private fun AddressPill(tab: Tab, a: ChromeActions, swipe: Boolean = true) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 when {
-                    tab.isStart || label.isBlank() -> if (app.kaze.browser.fx.fxOn("wordrotate")) app.kaze.browser.fx.TextoRotando(listOf("Buscar o escribir dirección", "Buscar noticias", "Buscar recetas", "Buscar videos", "Buscar manga"), KazeType.body, color = k.ink55) else Text("Buscar o escribir dirección", style = KazeType.body, color = k.ink55, maxLines = 1)
+                    tab.isStart || label.isBlank() -> if (app.kaze.browser.fx.fxOn("wordrotate") || app.kaze.browser.fx.fxOn("morphingtext")) app.kaze.browser.fx.TextoRotando(listOf("Buscar o escribir dirección", "Buscar noticias", "Buscar recetas", "Buscar videos", "Buscar manga"), KazeType.body, color = k.ink55, morph = app.kaze.browser.fx.fxOn("morphingtext")) else Text("Buscar o escribir dirección", style = KazeType.body, color = k.ink55, maxLines = 1)
                     else -> {
                         if (tab.isPrivate) {
                             Text("Privada · ", style = KazeType.body.copy(fontWeight = FontWeight.Medium), color = k.ink55)
@@ -601,7 +602,8 @@ private fun AddressPill(tab: Tab, a: ChromeActions, swipe: Boolean = true) {
         // Progreso de carga: línea azul dentro de la cápsula, abajo.
         val progress by animateFloatAsState(tab.progress / 100f, tween(160), label = "progress")
         if (tab.loading && app.kaze.browser.fx.fxOn("borderbeam")) Box(Modifier.matchParentSize().hazBorde(23.dp, k.accent))
-        if (tab.loading) {
+        if (tab.loading && app.kaze.browser.fx.fxOn("progress")) app.kaze.browser.fx.BarraProgresoCoss(progress.coerceIn(0.05f, 1f), Modifier.align(Alignment.BottomStart).padding(horizontal = 14.dp), k.accent, androidx.compose.ui.graphics.Color.Transparent)
+        else if (tab.loading) {
             Box(
                 Modifier.align(Alignment.BottomStart).padding(horizontal = 10.dp).fillMaxWidth(progress.coerceIn(0.05f, 1f))
                     .height(2.5.dp).clip(RoundedCornerShape(50)).background(k.accent),
