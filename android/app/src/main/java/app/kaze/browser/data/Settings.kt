@@ -103,6 +103,19 @@ class Settings(context: Context) {
     var mochyTransitions by pref("mochy_transitions", true)
     /** Sección "Reanudar navegación" en la página de inicio. */
     var startResume by pref("start_resume", true)
+    // ── Ideas de Fir (github.com/alexhvoyer/fir) ──
+    /** Modo solo HTTPS: las páginas sin cifrar piden permiso antes de abrirse. */
+    var httpsOnly by pref("https_only", false)
+    /** Bloquear Fyx con huella, rostro o PIN al abrirlo y al volver a él. */
+    var appLock by pref("app_lock", false)
+    /** Días sin ver tras los que una pestaña normal se archiva (0 = nunca). */
+    var archiveAfterDays by pref("archive_days", 0)
+    /** Sitios (dominios) con JavaScript apagado, separados por coma. */
+    var jsOff by pref("js_off", "")
+    /** Mantener presionado un enlace abre la vista rápida (Glance) en vez del menú. */
+    var glanceOnLongPress by pref("glance_long_press", false)
+    /** Clave de la API de Gemini (aistudio.google.com) para "Resumir página"; vacía = sin resumen. */
+    var geminiKey by pref("gemini_key", "")
 
     /** Favoritos propios de un perfil (JSON); null si el usuario nunca los editó. */
     fun favorites(profileId: String): String? = runCatching { p.getString("favorites:$profileId", null) }.getOrNull()

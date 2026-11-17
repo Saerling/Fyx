@@ -98,6 +98,14 @@
     else if (msg.action === "options") {
       options = Object.assign(options, msg.options || {});
       if (original) aplicarOpciones(document.documentElement);
+    } else if (msg.action === "text") {
+      // Texto de la página para el resumen con IA: el artículo si lo hay; si no, lo visible.
+      let texto = "";
+      try {
+        const art = readerable() ? new Readability(document.cloneNode(true)).parse() : null;
+        texto = (art && art.textContent) || document.body.innerText || "";
+      } catch (e) { texto = (document.body && document.body.innerText) || ""; }
+      port.postMessage({ type: "text", value: texto.replace(/\s+\n/g, "\n").slice(0, 30000) });
     } else if (msg.action === "check") {
       port.postMessage({ type: "readerable", value: readerable() });
     }

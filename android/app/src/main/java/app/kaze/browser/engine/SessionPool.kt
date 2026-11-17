@@ -208,6 +208,31 @@ class SessionPool(
         sessions[tab.id]?.let { it.settings.useTrackingProtection = on; it.reload() }
     }
 
+    private fun jsOffHosts() = settings.jsOff.split(',').filter { it.isNotBlank() }.toSet()
+
+    /** ¿JavaScript está activo en el sitio de esta pestaña? (el ajuste general manda primero). */
+    fun jsOn(tab: Tab): Boolean = settings.javascript && Urls.host(tab.url) !in jsOffHosts()
+
+    /** Apaga (o enciende) JavaScript solo en este sitio y recarga, como los ajustes por sitio de Fir. */
+    fun setJs(tab: Tab, on: Boolean) {
+        val host = Urls.host(tab.url)?.takeIf { it.isNotBlank() } ?: return
+        val off = jsOffHosts().toMutableSet()
+        if (on) off -= host else off += host
+        settings.jsOff = off.joinToString(",")
+        sessions[tab.id]?.let { it.settings.allowJavascript = on && settings.javascript; it.reload() }
+    }
+
+    /** Borra cookies, almacenamiento y caché de este sitio (y sus ajustes propios), y recarga. */
+    fun clearSiteData(tab: Tab) {
+        val host = Urls.host(tab.url)?.takeIf { it.isNotBlank() } ?: return
+        // Por host exacto: cortar a "dos partes" rompía con dominios como bbc.co.uk (borraba todo co.uk).
+        runtime.storageController.clearDataFromHost(host, org.mozilla.geckoview.StorageController.ClearFlags.ALL)
+        settings.jsOff = (jsOffHosts() - host).joinToString(",")
+        settings.trackingOff = (offHosts() - host).joinToString(",")
+        sessions[tab.id]?.reload()
+        ui.show("Datos de $host borrados")
+    }
+
     fun setDesktopMode(tab: Tab, desktop: Boolean) {
         tab.desktopMode = desktop
         tab.desktopTouched = true
@@ -228,7 +253,7 @@ class SessionPool(
             .usePrivateMode(tab.isPrivate)
             .useTrackingProtection(Urls.host(tab.url) !in offHosts())
             .suspendMediaWhenInactive(false)
-            .allowJavascript(settings.javascript)
+            .allowJavascript(settings.javascript && Urls.host(tab.url) !in jsOffHosts())
         space?.contextId(store.profileById(space.profileId))?.let(b::contextId)
         // En tableta, las páginas se piden en versión de escritorio (se puede cambiar por pestaña).
         // En teléfono, siempre móvil (aunque la pestaña venga de antes con escritorio); solo cambia si el usuario lo elige.
@@ -263,6 +288,7 @@ class SessionPool(
                                 "readerable" -> tab.readerable = m.optBoolean("value")
                                 "reader" -> tab.readerMode = m.optBoolean("active")
                                 "error" -> ui.show(m.optString("message"))
+                                "text" -> textWaiters.remove(tab.id)?.invoke(m.optString("value"))
                             }
                         }
                     }
@@ -273,6 +299,18 @@ class SessionPool(
                 })
             }
         }, "kaze")
+    }
+
+    private val textWaiters = HashMap<String, (String) -> Unit>()
+
+    /** Pide a la página su texto (artículo o lo visible) para resumirlo; null si la página no responde. */
+    fun pageText(tab: Tab, result: (String?) -> Unit) {
+        val port = ports[tab.id] ?: return result(null)
+        val waiter: (String) -> Unit = { result(it) }
+        textWaiters[tab.id] = waiter
+        port.postMessage(JSONObject().put("action", "text"))
+        // Si la página no contesta en 5 s, se da por perdida; solo este pedido (no uno más nuevo).
+        main.postDelayed({ if (textWaiters[tab.id] === waiter) textWaiters.remove(tab.id)?.invoke("") }, 5_000)
     }
 
     /** Activa o desactiva el modo Lector en la pestaña. */
@@ -382,7 +420,11 @@ class SessionPool(
         }
 
         override fun onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: ContentDelegate.ContextElement) {
-            if (element.linkUri != null || element.srcUri != null) ui.contextMenu = ContextMenuRequest(tab, element)
+            val link = element.linkUri
+            // Con la vista rápida activada, un enlace (no una imagen) se abre en vivo en una hoja, como en Fir.
+            if (link != null && settings.glanceOnLongPress && element.type == ContentDelegate.ContextElement.TYPE_NONE && link.startsWith("http")) {
+                ui.glance = GlanceRequest(tab, link)
+            } else if (link != null || element.srcUri != null) ui.contextMenu = ContextMenuRequest(tab, element)
         }
 
         override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
@@ -452,6 +494,8 @@ class SessionPool(
             if (url != null && !url.startsWith(ErrorPages.PREFIX)) {
                 if (url != Urls.BLANK) popups.remove(tab.id) // ya mostró una página de verdad
                 store.onUrl(tab, url)
+                val js = jsOn(tab)
+                if (session.settings.allowJavascript != js) session.settings.allowJavascript = js
             }
         }
 

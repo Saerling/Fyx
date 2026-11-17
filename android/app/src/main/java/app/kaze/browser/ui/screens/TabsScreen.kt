@@ -42,6 +42,7 @@ import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import app.kaze.browser.ui.components.FaviconTile
@@ -321,6 +322,7 @@ fun TabsScreen(
                     val (next, icon, label) = when (mode) {
                         "grid" -> Triple("compact", Icons.Outlined.Apps, "Vista compacta")
                         "compact" -> Triple("list", Icons.AutoMirrored.Outlined.ViewList, "Vista de lista")
+                        "list" -> Triple("deck", Icons.Outlined.ViewCarousel, "Vista de mazo")
                         else -> Triple("grid", Icons.Outlined.GridView, "Vista de tarjetas")
                     }
                     Box(
@@ -347,7 +349,13 @@ fun TabsScreen(
             }
             // Pestañas sueltas y carpetas (una carpeta ocupa el lugar de su primera pestaña).
             // Con búsqueda o tema activo se ven las pestañas sueltas (también las de dentro de grupos).
-            val entries: List<Any> = if (flat) normal else {
+            // Mazo (de Fir): las pestañas sueltas superpuestas; con búsqueda o tema se vuelve a la cuadrícula.
+            val deck = mode == "deck" && !flat
+            if (deck) item(span = { GridItemSpan(maxLineSpan) }, key = "deck") {
+                val h = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.62f).dp
+                TabDeck(normal, store.selectedTabId, onOpen = onOpen, onClose = onClose, onMenu = onTabMenu, height = h)
+            }
+            val entries: List<Any> = if (deck) emptyList() else if (flat) normal else {
                 val seen = mutableSetOf<String>()
                 normal.mapNotNull { t ->
                     when {
@@ -924,6 +932,7 @@ internal fun TabCard(
 
     Column(
         Modifier
+            .zoomSource(tab.id)
             .fx("tilt") { inclinar(8f) }.fx("magiccard") { foco() }.fx("glare") { destello() }
             .offset { IntOffset(dx.value.roundToInt(), 0) }
             .graphicsLayer {

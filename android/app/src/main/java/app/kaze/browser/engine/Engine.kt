@@ -92,6 +92,8 @@ object Engine {
         val builder = GeckoRuntimeSettings.Builder()
             .contentBlocking(blocking)
             .javaScriptEnabled(settings.javascript)
+            // Solo HTTPS (como Fir y Firefox): una página sin cifrar muestra un aviso antes de abrirse.
+            .allowInsecureConnections(if (settings.httpsOnly) GeckoRuntimeSettings.HTTPS_ONLY else GeckoRuntimeSettings.ALLOW_ALL)
             .preferredColorScheme(
                 when (settings.theme) {
                     ThemeMode.SYSTEM -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM

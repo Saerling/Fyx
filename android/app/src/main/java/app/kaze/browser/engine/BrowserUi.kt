@@ -47,6 +47,9 @@ sealed interface PermissionAsk {
 
 class ContextMenuRequest(val tab: Tab, val element: ContextElement)
 
+/** Vista rápida (Glance de Fir): la página de un enlace, en vivo en una hoja, sin abrir pestaña. */
+class GlanceRequest(val from: Tab, val url: String)
+
 /**
  * Estado de la UI que nace en Gecko: diálogos, menú contextual, pantalla completa, avisos.
  * Vive aparte de las pantallas para que sobreviva a rotaciones y cambios de tema.
@@ -55,6 +58,9 @@ class BrowserUi {
     var prompt by mutableStateOf<PendingPrompt?>(null)
     var permission by mutableStateOf<PermissionAsk?>(null)
     var contextMenu by mutableStateOf<ContextMenuRequest?>(null)
+    var glance by mutableStateOf<GlanceRequest?>(null)
+    /** Pestaña cuyo resumen con IA se está mostrando. */
+    var summary by mutableStateOf<Tab?>(null)
     var fullscreen by mutableStateOf(false)
     var toast by mutableStateOf<String?>(null)
     /** Sube con cada aviso: dos avisos iguales seguidos cuentan como dos (y reinician su tiempo). */

@@ -89,6 +89,8 @@ class Kaze private constructor(context: Context) {
     }
 
     val thumbnails = Thumbnails(context)
+    /** Pestañas archivadas por llevar días sin verse (Ajustes → Pestañas). */
+    val archive = app.kaze.browser.data.TabArchive(context)
 
     /** Fijadas, sus grupos y Essentials con la cuenta de Firefox (Zen), en ambos sentidos. */
     val tabSync = app.kaze.browser.zsync.ZenTabSync(context.applicationContext, store) { t ->

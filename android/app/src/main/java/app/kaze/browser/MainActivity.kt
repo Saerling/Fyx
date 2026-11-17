@@ -4,6 +4,13 @@
 
 package app.kaze.browser
 
+import app.kaze.browser.ui.screens.CardZoomOverlay
+import app.kaze.browser.ui.screens.CardZoom
+import app.kaze.browser.ui.sheets.SummarySheet
+import app.kaze.browser.ui.sheets.LockScreen
+import app.kaze.browser.ui.sheets.GlanceSheet
+import app.kaze.browser.engine.GlanceRequest
+import app.kaze.browser.engine.AppLock
 import app.kaze.browser.ui.AperturaPuntos
 import app.kaze.browser.ui.PuntosIcono
 import app.kaze.browser.ui.FxCapasFyx
@@ -228,6 +235,9 @@ class MainActivity : ComponentActivity() {
             override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) { contentResolver.unregisterContentObserver(motionObserver) }
         })
         val motionRecomposer = window.decorView.createLifecycleAwareWindowRecomposer(AppMotion.durationScale, lifecycle)
+        // Bloqueo con huella (de Fir): al abrir en frío arranca bloqueado, y la miniatura de Recientes no muestra páginas.
+        if (savedInstanceState == null && app.settings.appLock && AppLock.available(this)) AppLock.locked = true
+        if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!app.settings.appLock)
         setContent(parent = motionRecomposer) {
             val dark = Engine.isDarkTheme(this, app.settings)
             val s = app.settings
@@ -246,6 +256,7 @@ class MainActivity : ComponentActivity() {
                         // Apertura de puntos: solo al abrir Fyx desde su icono (nunca al llegar con un enlace, ni al girar).
                         var apertura by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(aperturaAlAbrir && s.animationsOn && AppMotion.durationScale.scaleFactor > 0f) }
                         if (apertura) AperturaPuntos(PuntosIcono, "Fyx") { apertura = false }
+                        if (AppLock.locked) LockScreen()
                     }
                 }
             }
@@ -280,6 +291,9 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         if (!::app.isInitialized) return
+        if (app.settings.appLock && !isChangingConfigurations && !isInPictureInPictureMode &&
+            AppLock.available(this)
+        ) AppLock.locked = true
         app.pool.hideAll()
         app.store.flush()
     }
@@ -390,6 +404,9 @@ class MainActivity : ComponentActivity() {
 
         // Al abrir: volver a la última pestaña del espacio, o una pestaña nueva con la página de inicio.
         LaunchedEffect(Unit) {
+            // Archivar las pestañas que llevan días sin verse (de Fir): el mazo queda limpio y gasta menos.
+            val archived = app.archive.archiveStale(store, app.settings.archiveAfterDays) { app.pool.close(it); app.thumbnails.delete(it.id) }
+            if (archived > 0) ui.show(if (archived == 1) "1 pestaña archivada" else "$archived pestañas archivadas")
             if (store.selectedTab == null && !showTabs) {
                 val last = store.tabs.filter { it.spaceId == store.currentSpaceId && !it.isPrivate }.maxByOrNull { it.lastUsed }
                 if (last != null) store.select(last) else store.newTab(Urls.START)
@@ -397,15 +414,23 @@ class MainActivity : ComponentActivity() {
         }
 
         /** Foto de la página actual para la vista de pestañas (solo la visible: no gasta RAM extra). */
-        fun snapshot(then: () -> Unit) {
+        fun snapshot(zoom: Boolean = false, then: () -> Unit) {
             val t = store.selectedTab
             if (t == null || t.isStart || geckoView.visibility != View.VISIBLE || geckoView.session == null) {
                 then(); return
             }
-            geckoView.capturePixels().accept({ bmp -> if (bmp != null) app.thumbnails.save(t.id, bmp); then() }, { then() })
+            geckoView.capturePixels().accept({ bmp ->
+                // La página se encoge hasta su tarjeta (su foto, no la vista viva). Copia: save() recicla la original.
+                val shot = if (zoom && bmp != null && AppMotion.enabled) bmp.copy(bmp.config ?: android.graphics.Bitmap.Config.ARGB_8888, false) else null
+                if (bmp != null) app.thumbnails.save(t.id, bmp)
+                then()
+                if (shot != null) CardZoom.start(t.id, shot, opening = false)
+            }, { then() })
         }
 
         fun open(t: Tab) {
+            // Desde la vista de pestañas, la página crece desde su tarjeta.
+            if (showTabs) CardZoom.start(t.id, app.thumbnails.cached(t.id), opening = true)
             store.select(t)
             showTabs = false
         }
@@ -443,7 +468,7 @@ class MainActivity : ComponentActivity() {
             }, onDismiss = release)
         }
 
-        fun showTabsGrid() = snapshot { showTabs = true }
+        fun showTabsGrid() = snapshot(zoom = true) { showTabs = true }
 
         /** Deslizar la barra: pestaña anterior/siguiente del espacio (como Safari). */
         fun swipeTab(delta: Int) {
@@ -778,6 +803,7 @@ class MainActivity : ComponentActivity() {
                     onHistory = { librarySection = 2; library = true },
                 )
             }
+            CardZoomOverlay()
 
             search?.let { target ->
                 SearchScreen(
@@ -986,7 +1012,16 @@ class MainActivity : ComponentActivity() {
                         req.element.type == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO ||
                             req.element.type == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_AUDIO
                     },
+                    onGlance = { ui.glance = GlanceRequest(req.tab, it) },
                 )
+            }
+            ui.summary?.let { t ->
+                SummarySheet(t, onDismiss = { ui.summary = null }) { url -> open(store.newTab(url, after = t)) }
+            }
+            ui.glance?.let { g ->
+                GlanceSheet(g, onDismiss = { ui.glance = null }) { url: String ->
+                    open(store.newTab(url, spaceId = g.from.spaceId, private = g.from.isPrivate, after = g.from))
+                }
             }
 
             // ── Diálogos de la página ──

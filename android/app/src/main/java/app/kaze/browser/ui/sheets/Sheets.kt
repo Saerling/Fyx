@@ -4,12 +4,15 @@
 
 package app.kaze.browser.ui.sheets
 
+import androidx.compose.material.icons.outlined.AutoAwesome
 import app.kaze.browser.fx.*
 import app.kaze.browser.ui.mochy.MochyModalSheet
 import app.kaze.browser.ui.mochy.SheetActionCard
 import app.kaze.browser.ui.mochy.SheetActionCardRow
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
@@ -80,6 +83,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material.icons.outlined.UnfoldLess
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
@@ -274,6 +278,7 @@ fun PageMenuSheet(
                 enabled = tab.translated || other,
             ) { if (tab.translated) pool.showOriginal(tab) else pool.translate(tab); onDismiss() }
             IosRow("Ocultar barra de herramientas", Icons.Outlined.UnfoldLess) { onHideBar(); onDismiss() }
+            if (!tab.isPrivate && tab.url.startsWith("http")) IosRow("Resumir página", Icons.Outlined.AutoAwesome) { onDismiss(); app.ui.summary = tab }
             // Si una página no carga bien, a veces es el bloqueo de rastreadores: se puede apagar solo aquí.
             var tracking by remember(tab.id) { mutableStateOf(true) }
             LaunchedEffect(tab.id, tab.url) { pool.trackingOn(tab) { tracking = it } }
@@ -286,6 +291,16 @@ fun PageMenuSheet(
                 "Versión de escritorio", Icons.Outlined.DesktopWindows,
                 trailing = { KazeSwitch(tab.desktopMode) { pool.setDesktopMode(tab, it) } },
             ) { pool.setDesktopMode(tab, !tab.desktopMode) }
+            // Ajustes por sitio (como la hoja de página de Fir): JavaScript y borrar lo que guardó el sitio.
+            if (app.settings.javascript && tab.url.startsWith("http")) {
+                var js by remember(tab.id, tab.url) { mutableStateOf(pool.jsOn(tab)) }
+                IosRow(
+                    "JavaScript en este sitio", Icons.Outlined.Code,
+                    subtitle = if (js) null else "Apagado aquí: la página carga más rápido pero puede fallar",
+                    trailing = { KazeSwitch(js) { js = it; pool.setJs(tab, it) } },
+                ) { js = !js; pool.setJs(tab, js) }
+                IosRow("Borrar datos de este sitio", Icons.Outlined.DeleteSweep, titleColor = SystemRed) { pool.clearSiteData(tab); onDismiss() }
+            }
             IosRow(
                 "Reporte de privacidad", Icons.Outlined.Shield,
                 subtitle = "${tab.trackersBlocked} rastreadores bloqueados en esta página", divider = false, chevron = true,
@@ -894,6 +909,8 @@ fun ContextMenuSheet(
     onDownload: (String) -> Unit,
     /** Dirección del video o audio pulsado (si lo hay). */
     media: String? = null,
+    /** Vista rápida del enlace (Glance). */
+    onGlance: ((String) -> Unit)? = null,
 ) {
     val app = LocalApp.current
     val k = LocalKaze.current
@@ -907,6 +924,7 @@ fun ContextMenuSheet(
         )
         IosGroup {
             if (link != null) {
+                if (onGlance != null && link.startsWith("http")) IosRow("Vista rápida", Icons.Outlined.Visibility) { onDismiss(); onGlance(link) }
                 IosRow("Abrir en pestaña nueva", Icons.AutoMirrored.Outlined.OpenInNew) { onOpenNew(link, true); onDismiss() }
                 IosRow("Abrir en segundo plano", Icons.Outlined.Add) { onOpenNew(link, false); onDismiss() }
                 IosRow("Abrir en pestaña privada", Icons.Outlined.VisibilityOff) { onOpenNew("private:$link", true); onDismiss() }

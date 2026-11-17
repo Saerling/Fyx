@@ -4,6 +4,8 @@
 
 package app.kaze.browser.ui.sheets
 
+import app.kaze.browser.data.TabKind
+import app.kaze.browser.engine.AppLock
 import app.kaze.browser.ui.estiloDialogoFxM
 import app.kaze.browser.ui.catalogoFyx
 import app.kaze.browser.ui.IdsFxFyx
@@ -109,10 +111,10 @@ fun LibrarySheet(onDismiss: () -> Unit, onOpenUrl: (String) -> Unit, onOpenTab: 
     }
 
     KazeSheet(onDismiss, full = true) {
-        SheetTitle(listOf("Favoritos", "Lista de lectura", "Historial")[section], "OK", onDismiss)
+        SheetTitle(listOf("Favoritos", "Lista de lectura", "Historial", "Archivadas")[section], "OK", onDismiss)
         // Control segmentado de iOS
         Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().height(34.dp).liftCard(RoundedCornerShape(9.dp)).padding(2.dp)) {
-            listOf("Favoritos", "Lectura", "Historial").forEachIndexed { i, label ->
+            listOf("Favoritos", "Lectura", "Historial", "Archivo").forEachIndexed { i, label ->
                 Box(
                     Modifier.weight(1f).height(30.dp).clip(RoundedCornerShape(7.dp))
                         .then(if (section == i) Modifier.card(RoundedCornerShape(7.dp)) else Modifier)
@@ -149,6 +151,29 @@ fun LibrarySheet(onDismiss: () -> Unit, onOpenUrl: (String) -> Unit, onOpenTab: 
                                 ) { onDismiss(); onOpenUrl(r.url) }
                             }
                         }
+                    }
+                }
+            }
+            3 -> {
+                val items = app.archive.items
+                if (items.isEmpty()) Empty("No hay pestañas archivadas.\nActívalo en Ajustes → Pestañas → Archivar pestañas sin ver.")
+                else LazyColumn(Modifier.fillMaxWidth().heightIn(max = 2000.dp)) {
+                    item {
+                        IosGroup {
+                            items.forEachIndexed { i, a ->
+                                IosRow(
+                                    a.title.ifBlank { Urls.displayHost(a.url) }, subtitle = "${Urls.displayHost(a.url)} · ${dayLabel(a.archivedAt)}",
+                                    leading = { Favicon(a.url, 26.dp) }, divider = i < items.lastIndex,
+                                    trailing = { RemoveButton { app.archive.remove(a) } },
+                                ) {
+                                    onDismiss()
+                                    app.archive.remove(a)
+                                    onOpenTab(app.store.reopen(a.url, a.spaceId, TabKind.NORMAL))
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(20.dp))
+                        IosGroup { IosRow("Borrar archivo", titleColor = SystemRed, divider = false) { app.archive.clear() } }
                     }
                 }
             }
@@ -257,8 +282,14 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
             IosSectionHeader("Pestañas")
             IosGroup {
                 BarLayoutPicker(s.barLayout) { s.barLayout = it; s.barTop = false }
-                Toggle("Fila de pestañas sobre la barra", s.tabStripPhone, divider = false) { s.tabStripPhone = it }
+                Toggle("Fila de pestañas sobre la barra", s.tabStripPhone) { s.tabStripPhone = it }
+                Choice(
+                    "Archivar pestañas sin ver", listOf(0, 1, 7, 14, 30), s.archiveAfterDays,
+                    { when (it) { 0 -> "Nunca"; 1 -> "Tras 1 día"; else -> "Tras $it días" } },
+                ) { s.archiveAfterDays = it }
+                Toggle("Vista rápida al mantener un enlace", s.glanceOnLongPress, divider = false) { s.glanceOnLongPress = it }
             }
+            Note("Las pestañas archivadas se cierran solas y quedan en Biblioteca → Archivadas. Con la vista rápida, mantener presionado un enlace abre la página en una hoja; el menú sigue en ⋯ → Vista rápida.")
             Note("En el teléfono, muestra las pestañas abiertas encima de la barra. Está en prueba.")
 
             IosSectionHeader("Diseño")
@@ -269,8 +300,8 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
                     s.textSize = it; Engine.applyTextSize(app.runtime, it)
                 }
                 Choice(
-                    "Vista de pestañas", listOf("grid", "compact", "list"), s.tabsView,
-                    { when (it) { "compact" -> "Compacta"; "list" -> "Lista"; else -> "Tarjetas" } }, divider = false,
+                    "Vista de pestañas", listOf("grid", "compact", "list", "deck"), s.tabsView,
+                    { when (it) { "compact" -> "Compacta"; "list" -> "Lista"; "deck" -> "Mazo"; else -> "Tarjetas" } }, divider = false,
                 ) { s.tabsView = it }
             }
 
@@ -348,6 +379,22 @@ fun SettingsSheet(onDismiss: () -> Unit, onRestart: () -> Unit, onCheckUpdates: 
                 Choice("Protección contra rastreo", TrackingLevel.entries, s.tracking, { it.label }) { s.tracking = it; needsRestart = true }
                 Choice("DNS seguro", DnsMode.entries, s.dns, { it.label }) { s.dns = it; needsRestart = true }
                 Toggle("JavaScript", s.javascript) { s.javascript = it; needsRestart = true }
+                Toggle("Solo HTTPS", s.httpsOnly) {
+                    s.httpsOnly = it
+                    app.runtime.settings.setAllowInsecureConnections(
+                        if (it) org.mozilla.geckoview.GeckoRuntimeSettings.HTTPS_ONLY else org.mozilla.geckoview.GeckoRuntimeSettings.ALLOW_ALL,
+                    )
+                }
+                if (AppLock.available(context)) {
+                    var lock by remember { mutableStateOf(s.appLock) }
+                    // Quitar el bloqueo también pide huella: nadie con el teléfono desbloqueado lo apaga sin ti.
+                    Toggle("Bloquear Fyx con huella o PIN", lock) { on ->
+                        AppLock.authenticate(context, if (on) "Activar bloqueo" else "Quitar bloqueo") {
+                            lock = on; s.appLock = on
+                            if (android.os.Build.VERSION.SDK_INT >= 33) (context as? android.app.Activity)?.setRecentsScreenshotEnabled(!on)
+                        }
+                    }
+                }
                 var adblock by remember { mutableStateOf(s.adblock) }
                 Toggle("Bloquear anuncios (uBlock Origin)", adblock) { adblock = it; app.setAdblock(it) }
                 IosRow("Borrar caché", titleColor = k.accent) {
