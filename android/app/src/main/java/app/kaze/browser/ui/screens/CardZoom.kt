@@ -65,8 +65,9 @@ fun CardZoomOverlay() {
         val d = LocalDensity.current
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
-        // t = 0 en la tarjeta, 1 a pantalla completa.
-        val t = if (a.opening) p.value else 1f - p.value
+        // t = 0 en la tarjeta, 1 a pantalla completa. El resorte puede pasarse un poco del final:
+        // se limita a 0..1, o la esquina sale con radio negativo y Compose cierra la app.
+        val t = (if (a.opening) p.value else 1f - p.value).coerceIn(0f, 1f)
         val left = lerp(a.card.left, 0f, t)
         val top = lerp(a.card.top, 0f, t)
         val right = lerp(a.card.right, w, t)
@@ -76,7 +77,7 @@ fun CardZoomOverlay() {
             modifier = Modifier
                 .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
                 .size(with(d) { (right - left).toDp() }, with(d) { (bottom - top).toDp() })
-                .clip(RoundedCornerShape(with(d) { lerp(22f, 0f, t).dp })),
+                .clip(RoundedCornerShape(with(d) { lerp(22f, 0f, t).coerceAtLeast(0f).dp })),
         )
     }
 }
