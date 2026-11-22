@@ -1,5 +1,5 @@
 [versions]
-agp = "9.4.1"
+agp = "9.5.2"
 kotlin = "2.4.21"
 # Versión de GeckoView = versión de Firefox. Mantener alineada con desktop/firefox-version.txt.
 geckoview = "158.0.20261019185856"
