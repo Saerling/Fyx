@@ -8,7 +8,7 @@ activityCompose = "1.13.0"
 coreKtx = "1.19.1"
 lifecycle = "2.11.0"
 junit = "4.13.2"
-robolectric = "4.17"
+robolectric = "4.18.1"
 roborazzi = "1.76.0"
 
 [libraries]
